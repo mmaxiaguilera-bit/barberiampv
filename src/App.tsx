@@ -10,6 +10,7 @@ import BarberPanel from "./pages/BarberPanel.tsx";
 import AdminOverview from "./pages/AdminOverview.tsx";
 import AdminAppointments from "./pages/AdminAppointments.tsx";
 import AdminBarbers from "./pages/AdminBarbers.tsx";
+import AdminUsers from "./pages/AdminUsers.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/admin" element={<AdminOverview />} />
             <Route path="/admin/turnos" element={<AdminAppointments />} />
             <Route path="/admin/barberos" element={<AdminBarbers />} />
+            <Route path="/admin/usuarios" element={<AdminUsers />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
