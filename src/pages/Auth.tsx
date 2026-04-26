@@ -16,6 +16,7 @@ const schema = z.object({
   email: z.string().trim().email("Email inválido").max(255),
   password: z.string().min(6, "Mínimo 6 caracteres").max(72),
 });
+type Creds = { email: string; password: string };
 
 const Auth = () => {
   const { user, role, loading } = useAuth();
@@ -33,7 +34,7 @@ const Auth = () => {
     const parsed = schema.safeParse({ email, password });
     if (!parsed.success) return toast.error(parsed.error.issues[0].message);
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword(parsed.data);
+    const { error } = await supabase.auth.signInWithPassword(parsed.data as Creds);
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success("¡Bienvenido!");
@@ -45,7 +46,7 @@ const Auth = () => {
     if (!parsed.success) return toast.error(parsed.error.issues[0].message);
     setBusy(true);
     const { error } = await supabase.auth.signUp({
-      ...parsed.data,
+      ...(parsed.data as Creds),
       options: {
         emailRedirectTo: `${window.location.origin}/panel`,
         data: { full_name: name },
