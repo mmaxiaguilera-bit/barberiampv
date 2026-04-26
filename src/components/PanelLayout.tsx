@@ -3,7 +3,7 @@ import { Navigate, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { Loader2, LogOut, LayoutDashboard, CalendarDays, Users, Scissors } from "lucide-react";
+import { Loader2, LogOut, LayoutDashboard, CalendarDays, Users, Scissors, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -25,6 +25,7 @@ export const PanelLayout = ({ children, requireRole = "any" }: Props) => {
     { to: "/admin", icon: LayoutDashboard, label: "Resumen", end: true },
     { to: "/admin/turnos", icon: CalendarDays, label: "Turnos" },
     { to: "/admin/barberos", icon: Users, label: "Barberos" },
+    { to: "/admin/usuarios", icon: UserCog, label: "Usuarios" },
   ];
   const barberLinks = [
     { to: "/panel", icon: CalendarDays, label: "Mis turnos", end: true },
