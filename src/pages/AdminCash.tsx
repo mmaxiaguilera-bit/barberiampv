@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Database } from "@/integrations/supabase/types";
-import { Barber, formatPrice, formatTime, toISODate } from "@/lib/booking";
+import { Barber, formatPrice, toISODate } from "@/lib/booking";
 import {
   PAYMENT_METHODS, EXPENSE_CATEGORIES, paymentMethodLabel, paymentMethodIcon,
   expenseCategoryLabel, PaymentMethod, ExpenseCategory
