@@ -11,6 +11,10 @@ import AdminOverview from "./pages/AdminOverview.tsx";
 import AdminAppointments from "./pages/AdminAppointments.tsx";
 import AdminBarbers from "./pages/AdminBarbers.tsx";
 import AdminUsers from "./pages/AdminUsers.tsx";
+import AdminServices from "./pages/AdminServices.tsx";
+import AdminSchedules from "./pages/AdminSchedules.tsx";
+import AdminCash from "./pages/AdminCash.tsx";
+import AdminReports from "./pages/AdminReports.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -29,6 +33,10 @@ const App = () => (
             <Route path="/admin" element={<AdminOverview />} />
             <Route path="/admin/turnos" element={<AdminAppointments />} />
             <Route path="/admin/barberos" element={<AdminBarbers />} />
+            <Route path="/admin/servicios" element={<AdminServices />} />
+            <Route path="/admin/horarios" element={<AdminSchedules />} />
+            <Route path="/admin/caja" element={<AdminCash />} />
+            <Route path="/admin/reportes" element={<AdminReports />} />
             <Route path="/admin/usuarios" element={<AdminUsers />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

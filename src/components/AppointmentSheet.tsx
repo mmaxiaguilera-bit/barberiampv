@@ -5,10 +5,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { STATUS_OPTIONS, StatusBadge, statusLabel } from "./StatusBadge";
+import { CollectPaymentDialog } from "./CollectPaymentDialog";
 import { Database } from "@/integrations/supabase/types";
 import { formatPrice, formatTime } from "@/lib/booking";
 import { toast } from "sonner";
-import { Phone, Calendar, Scissors, User, Trash2, Loader2 } from "lucide-react";
+import { Phone, Calendar, Scissors, User, Trash2, Loader2, DollarSign } from "lucide-react";
 
 type Appt = Database["public"]["Tables"]["appointments"]["Row"] & { barbers?: { name: string } | null };
 
@@ -24,6 +25,7 @@ export const AppointmentSheet = ({ appointment, open, onOpenChange, onChanged, c
   const [status, setStatus] = useState<Database["public"]["Enums"]["appointment_status"]>("pendiente");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [collectOpen, setCollectOpen] = useState(false);
 
   useEffect(() => {
     if (appointment) {
@@ -33,6 +35,8 @@ export const AppointmentSheet = ({ appointment, open, onOpenChange, onChanged, c
   }, [appointment]);
 
   if (!appointment) return null;
+
+  const alreadyAttended = appointment.status === "atendido";
 
   const save = async () => {
     setSaving(true);
@@ -44,6 +48,15 @@ export const AppointmentSheet = ({ appointment, open, onOpenChange, onChanged, c
     toast.success("Turno actualizado");
     onChanged();
     onOpenChange(false);
+  };
+
+  const handleSaveOrCollect = () => {
+    // If user is changing status to "atendido" and not already attended, open collect dialog
+    if (status === "atendido" && !alreadyAttended) {
+      setCollectOpen(true);
+    } else {
+      save();
+    }
   };
 
   const remove = async () => {
@@ -100,10 +113,17 @@ export const AppointmentSheet = ({ appointment, open, onOpenChange, onChanged, c
                 <Trash2 className="h-4 w-4" />
               </Button>
             )}
-            <Button variant="gold" onClick={save} disabled={saving} className="flex-1">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar cambios"}
+            <Button variant="gold" onClick={handleSaveOrCollect} disabled={saving} className="flex-1">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> :
+                (status === "atendido" && !alreadyAttended) ? <><DollarSign className="h-4 w-4" /> Cobrar y guardar</> : "Guardar cambios"}
             </Button>
           </div>
+
+          {!alreadyAttended && status !== "atendido" && (
+            <Button variant="goldOutline" className="w-full" onClick={() => { setStatus("atendido"); setCollectOpen(true); }}>
+              <DollarSign className="h-4 w-4" /> Cobrar ahora
+            </Button>
+          )}
 
           <a
             href={`https://wa.me/${appointment.client_phone.replace(/[^\d]/g, "")}?text=${encodeURIComponent(`Hola ${appointment.client_name}, te confirmo tu turno en MVP Barber.`)}`}
@@ -113,6 +133,13 @@ export const AppointmentSheet = ({ appointment, open, onOpenChange, onChanged, c
             Enviar mensaje por WhatsApp
           </a>
         </div>
+
+        <CollectPaymentDialog
+          open={collectOpen}
+          onOpenChange={setCollectOpen}
+          appointment={appointment}
+          onPaid={() => { onChanged(); onOpenChange(false); }}
+        />
       </SheetContent>
     </Sheet>
   );
