@@ -110,6 +110,141 @@ export type Database = {
         }
         Relationships: []
       }
+      cash_closures: {
+        Row: {
+          appointments_count: number
+          closed_at: string
+          closed_by: string | null
+          closure_date: string
+          id: string
+          income_by_method: Json
+          notes: string | null
+          total_cash: number
+          total_expenses: number
+          total_income: number
+          total_tips: number
+        }
+        Insert: {
+          appointments_count?: number
+          closed_at?: string
+          closed_by?: string | null
+          closure_date: string
+          id?: string
+          income_by_method?: Json
+          notes?: string | null
+          total_cash?: number
+          total_expenses?: number
+          total_income?: number
+          total_tips?: number
+        }
+        Update: {
+          appointments_count?: number
+          closed_at?: string
+          closed_by?: string | null
+          closure_date?: string
+          id?: string
+          income_by_method?: Json
+          notes?: string | null
+          total_cash?: number
+          total_expenses?: number
+          total_income?: number
+          total_tips?: number
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at: string
+          created_by: string | null
+          description: string
+          expense_date: string
+          id: string
+        }
+        Insert: {
+          amount: number
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          created_by?: string | null
+          description: string
+          expense_date?: string
+          id?: string
+        }
+        Update: {
+          amount?: number
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          expense_date?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          appointment_id: string | null
+          barber_id: string
+          client_name: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          paid_at: string
+          payment_date: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          service_name: string
+          tip: number
+        }
+        Insert: {
+          amount: number
+          appointment_id?: string | null
+          barber_id: string
+          client_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          payment_date?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          service_name: string
+          tip?: number
+        }
+        Update: {
+          amount?: number
+          appointment_id?: string | null
+          barber_id?: string
+          client_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          payment_date?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          service_name?: string
+          tip?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -249,6 +384,18 @@ export type Database = {
     Enums: {
       app_role: "admin" | "barber"
       appointment_status: "pendiente" | "confirmado" | "atendido" | "cancelado"
+      expense_category:
+        | "insumos"
+        | "sueldos"
+        | "alquiler"
+        | "servicios"
+        | "otros"
+      payment_method:
+        | "efectivo"
+        | "transferencia"
+        | "tarjeta"
+        | "mercadopago"
+        | "otro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -378,6 +525,20 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "barber"],
       appointment_status: ["pendiente", "confirmado", "atendido", "cancelado"],
+      expense_category: [
+        "insumos",
+        "sueldos",
+        "alquiler",
+        "servicios",
+        "otros",
+      ],
+      payment_method: [
+        "efectivo",
+        "transferencia",
+        "tarjeta",
+        "mercadopago",
+        "otro",
+      ],
     },
   },
 } as const
