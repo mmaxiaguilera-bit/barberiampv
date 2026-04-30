@@ -44,14 +44,6 @@ const AdminSchedules = () => {
   const barberSchedules = schedules.filter(s => s.barber_id === barberId);
   const currentBarber = barbers.find(b => b.id === barberId);
 
-  const addSlot = async (dow: number) => {
-    const { error } = await supabase.from("schedules").insert({
-      barber_id: barberId, day_of_week: dow, start_time: "09:00:00", end_time: "18:00:00", slot_minutes: 45, active: true,
-    });
-    if (error) return toast.error(error.message);
-    load();
-  };
-
   return (
     <PanelLayout requireRole="admin">
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
@@ -77,26 +69,16 @@ const AdminSchedules = () => {
           </TabsList>
 
           <TabsContent value="agenda" className="space-y-3 mt-4">
-            {DAYS_ES.map((dayName, dow) => {
-              const slots = barberSchedules.filter(s => s.day_of_week === dow);
-              return (
-                <div key={dow} className="luxury-card p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium">{dayName}</h3>
-                    <Button size="sm" variant="goldOutline" onClick={() => addSlot(dow)}>
-                      <Plus className="h-3.5 w-3.5" /> Agregar franja
-                    </Button>
-                  </div>
-                  {slots.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic">Día libre</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {slots.map(s => <ScheduleRow key={s.id} schedule={s} onChanged={load} />)}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {DAYS_ES.map((dayName, dow) => (
+              <DaySection
+                key={dow}
+                dayName={dayName}
+                dow={dow}
+                slots={barberSchedules.filter(s => s.day_of_week === dow)}
+                barberId={barberId}
+                onChanged={load}
+              />
+            ))}
           </TabsContent>
 
           <TabsContent value="bloqueos" className="mt-4">
@@ -108,61 +90,112 @@ const AdminSchedules = () => {
   );
 };
 
-const ScheduleRow = ({ schedule, onChanged }: { schedule: Schedule; onChanged: () => void }) => {
-  const [start, setStart] = useState(formatTime(schedule.start_time));
-  const [end, setEnd] = useState(formatTime(schedule.end_time));
-  const [slotMin, setSlotMin] = useState<string>(String(schedule.slot_minutes));
-  const [active, setActive] = useState(schedule.active);
+type SlotDraft = { id: string; start: string; end: string; slotMin: string; active: boolean };
+
+const DaySection = ({ dayName, dow, slots, barberId, onChanged }: {
+  dayName: string; dow: number; slots: Schedule[]; barberId: string; onChanged: () => void;
+}) => {
+  const [drafts, setDrafts] = useState<SlotDraft[]>(() =>
+    slots.map(s => ({ id: s.id, start: formatTime(s.start_time), end: formatTime(s.end_time), slotMin: String(s.slot_minutes), active: s.active }))
+  );
   const [busy, setBusy] = useState(false);
 
-  const save = async () => {
-    if (start >= end) return toast.error("La hora de fin debe ser mayor al inicio");
-    setBusy(true);
-    const { error } = await supabase.from("schedules").update({
-      start_time: start + ":00", end_time: end + ":00", slot_minutes: Number(slotMin) || 45, active,
-    }).eq("id", schedule.id);
-    setBusy(false);
+  useEffect(() => {
+    setDrafts(slots.map(s => ({ id: s.id, start: formatTime(s.start_time), end: formatTime(s.end_time), slotMin: String(s.slot_minutes), active: s.active })));
+  }, [slots]);
+
+  const update = (id: string, patch: Partial<SlotDraft>) =>
+    setDrafts(prev => prev.map(d => d.id === id ? { ...d, ...patch } : d));
+
+  const addSlot = async () => {
+    const { error } = await supabase.from("schedules").insert({
+      barber_id: barberId, day_of_week: dow, start_time: "09:00:00", end_time: "18:00:00", slot_minutes: 45, active: true,
+    });
     if (error) return toast.error(error.message);
+    onChanged();
+  };
+
+  const saveAll = async () => {
+    for (const d of drafts) {
+      if (d.start >= d.end) return toast.error(`${dayName}: la hora de fin debe ser mayor al inicio`);
+    }
+    setBusy(true);
+    const results = await Promise.all(
+      drafts.map(d => supabase.from("schedules").update({
+        start_time: d.start + ":00", end_time: d.end + ":00", slot_minutes: Number(d.slotMin) || 45, active: d.active,
+      }).eq("id", d.id))
+    );
+    setBusy(false);
+    const err = results.find(r => r.error);
+    if (err?.error) return toast.error(err.error.message);
     toast.success("Guardado");
     onChanged();
   };
 
-  const remove = async () => {
+  const remove = async (id: string) => {
     if (!confirm("¿Eliminar esta franja?")) return;
-    const { error } = await supabase.from("schedules").delete().eq("id", schedule.id);
+    const { error } = await supabase.from("schedules").delete().eq("id", id);
     if (error) return toast.error(error.message);
     onChanged();
   };
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end p-2 rounded-md bg-secondary/20 border border-border">
-      <div>
-        <Label className="text-[10px] uppercase">Desde</Label>
-        <Input type="time" value={start} onChange={e => setStart(e.target.value)} />
+    <div className="luxury-card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-medium">{dayName}</h3>
+        <div className="flex gap-2">
+          {drafts.length > 0 && (
+            <Button size="sm" variant="gold" onClick={saveAll} disabled={busy}>
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Guardar"}
+            </Button>
+          )}
+          <Button size="sm" variant="goldOutline" onClick={addSlot}>
+            <Plus className="h-3.5 w-3.5" /> Agregar franja
+          </Button>
+        </div>
       </div>
-      <div>
-        <Label className="text-[10px] uppercase">Hasta</Label>
-        <Input type="time" value={end} onChange={e => setEnd(e.target.value)} />
-      </div>
-      <div>
-        <Label className="text-[10px] uppercase">Turno (min)</Label>
-        <Input type="number" min={5} step="5" value={slotMin} onChange={e => setSlotMin(e.target.value)} />
-      </div>
-      <div className="flex items-center justify-between gap-2 px-2 h-10 rounded-md border border-border">
-        <Label className="text-xs cursor-pointer">Activo</Label>
-        <Switch checked={active} onCheckedChange={setActive} />
-      </div>
-      <div className="flex gap-1">
-        <Button size="sm" variant="gold" onClick={save} disabled={busy} className="flex-1">
-          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Guardar"}
-        </Button>
-        <Button size="icon" variant="outline" onClick={remove} className="text-destructive hover:bg-destructive/10">
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
-      </div>
+      {drafts.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic">Día libre</p>
+      ) : (
+        <div className="space-y-2">
+          {drafts.map(d => (
+            <ScheduleRow key={d.id} draft={d} onChange={patch => update(d.id, patch)} onRemove={() => remove(d.id)} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
+
+const ScheduleRow = ({ draft, onChange, onRemove }: {
+  draft: SlotDraft;
+  onChange: (patch: Partial<SlotDraft>) => void;
+  onRemove: () => void;
+}) => (
+  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end p-2 rounded-md bg-secondary/20 border border-border">
+    <div>
+      <Label className="text-[10px] uppercase">Desde</Label>
+      <Input type="time" value={draft.start} onChange={e => onChange({ start: e.target.value })} />
+    </div>
+    <div>
+      <Label className="text-[10px] uppercase">Hasta</Label>
+      <Input type="time" value={draft.end} onChange={e => onChange({ end: e.target.value })} />
+    </div>
+    <div>
+      <Label className="text-[10px] uppercase">Turno (min)</Label>
+      <Input type="number" min={5} step="5" value={draft.slotMin} onChange={e => onChange({ slotMin: e.target.value })} />
+    </div>
+    <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2 px-2 h-10 rounded-md border border-border flex-1">
+        <Label className="text-xs cursor-pointer">Activo</Label>
+        <Switch checked={draft.active} onCheckedChange={v => onChange({ active: v })} />
+      </div>
+      <Button size="icon" variant="outline" onClick={onRemove} className="text-destructive hover:bg-destructive/10">
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  </div>
+);
 
 const BlocksManager = ({ barberId, barberName }: { barberId: string; barberName: string }) => {
   const [blocks, setBlocks] = useState<Block[]>([]);

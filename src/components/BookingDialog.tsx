@@ -27,6 +27,7 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
   const [services, setServices] = useState<Service[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const [service, setService] = useState<Service | null>(null);
   const [barber, setBarber] = useState<Barber | null>(null);
@@ -42,15 +43,18 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
 
   useEffect(() => {
     if (!open) return;
+    setLoading(true);
     (async () => {
-      const [{ data: s }, { data: b }, { data: sc }] = await Promise.all([
+      const [{ data: s, error: se }, { data: b }, { data: sc }] = await Promise.all([
         supabase.from("services").select("*").eq("active", true).order("display_order"),
         supabase.from("barbers").select("*").eq("active", true).order("display_order"),
         supabase.from("schedules").select("*").eq("active", true),
       ]);
+      if (se) toast.error("No se pudieron cargar los servicios. Intentá de nuevo.");
       setServices(s ?? []);
       setBarbers(b ?? []);
       setSchedules(sc ?? []);
+      setLoading(false);
     })();
   }, [open]);
 
@@ -130,6 +134,14 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
             <div className="p-6 overflow-y-auto flex-1">
               {step === 1 && (
                 <div className="space-y-2">
+                  {loading && (
+                    <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+                  )}
+                  {!loading && services.length === 0 && (
+                    <div className="text-sm text-muted-foreground text-center py-8 border border-dashed border-border rounded-lg">
+                      No hay servicios disponibles por el momento.
+                    </div>
+                  )}
                   {services.map(s => (
                     <button
                       key={s.id}
