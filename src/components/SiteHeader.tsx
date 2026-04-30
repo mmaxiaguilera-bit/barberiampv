@@ -34,11 +34,7 @@ export const SiteHeader = () => {
                 <LogOut className="h-4 w-4" />
               </Button>
             </>
-          ) : (
-            <Button variant="goldOutline" size="sm" onClick={() => navigate("/auth")}>
-              Acceso staff
-            </Button>
-          )}
+          ) : null}
         </nav>
       </div>
     </header>
