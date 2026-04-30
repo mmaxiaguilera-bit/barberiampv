@@ -78,6 +78,15 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 40px hsl(0 0% 7%) inset !important;
+    -webkit-text-fill-color: hsl(40 30% 92%) !important;
+    caret-color: hsl(40 30% 92%);
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', system-ui, sans-serif;
