@@ -77,6 +77,39 @@ export type Database = {
           },
         ]
       }
+      barber_blocks: {
+        Row: {
+          barber_id: string
+          block_date: string
+          created_at: string
+          created_by: string | null
+          end_time: string | null
+          id: string
+          reason: string | null
+          start_time: string | null
+        }
+        Insert: {
+          barber_id: string
+          block_date: string
+          created_at?: string
+          created_by?: string | null
+          end_time?: string | null
+          id?: string
+          reason?: string | null
+          start_time?: string | null
+        }
+        Update: {
+          barber_id?: string
+          block_date?: string
+          created_at?: string
+          created_by?: string | null
+          end_time?: string | null
+          id?: string
+          reason?: string | null
+          start_time?: string | null
+        }
+        Relationships: []
+      }
       barbers: {
         Row: {
           active: boolean
@@ -367,6 +400,14 @@ export type Database = {
     }
     Functions: {
       claim_first_admin: { Args: never; Returns: boolean }
+      get_blocked_ranges: {
+        Args: { _barber_id: string; _date: string }
+        Returns: {
+          end_time: string
+          full_day: boolean
+          start_time: string
+        }[]
+      }
       get_taken_slots: {
         Args: { _barber_id: string; _date: string }
         Returns: {
