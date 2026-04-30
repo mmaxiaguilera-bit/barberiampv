@@ -1,0 +1,1 @@
+ALTER TABLE public.schedules DROP CONSTRAINT IF EXISTS schedules_barber_id_day_of_week_key;
