@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Barber, DAYS_ES, Schedule, formatTime } from "@/lib/booking";
-import { Loader2, Plus, Trash2, Clock, Lock, Calendar as CalIcon } from "lucide-react";
+import { Loader2, Plus, Trash2, Clock, Lock, Calendar as CalIcon, Save } from "lucide-react";
 import { toast } from "sonner";
 import { BlockSlotDialog } from "@/components/BlockSlotDialog";
 
@@ -21,11 +21,15 @@ type Block = {
   reason: string | null;
 };
 
+type SlotDraft = { id: string; start: string; end: string; slotMin: string; active: boolean };
+
 const AdminSchedules = () => {
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [barberId, setBarberId] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [drafts, setDrafts] = useState<Record<number, SlotDraft[]>>({});
+  const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -43,6 +47,51 @@ const AdminSchedules = () => {
 
   const barberSchedules = schedules.filter(s => s.barber_id === barberId);
   const currentBarber = barbers.find(b => b.id === barberId);
+
+  // Sync drafts whenever schedules or barber changes
+  useEffect(() => {
+    const newDrafts: Record<number, SlotDraft[]> = {};
+    for (let dow = 0; dow < 7; dow++) {
+      newDrafts[dow] = barberSchedules
+        .filter(s => s.day_of_week === dow)
+        .map(s => ({ id: s.id, start: formatTime(s.start_time), end: formatTime(s.end_time), slotMin: String(s.slot_minutes), active: s.active }));
+    }
+    setDrafts(newDrafts);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schedules, barberId]);
+
+  const updateDraft = (dow: number, id: string, patch: Partial<SlotDraft>) => {
+    setDrafts(prev => ({
+      ...prev,
+      [dow]: (prev[dow] ?? []).map(d => d.id === id ? { ...d, ...patch } : d),
+    }));
+  };
+
+  const saveAll = async () => {
+    for (let dow = 0; dow < 7; dow++) {
+      for (const d of (drafts[dow] ?? [])) {
+        if (d.start >= d.end) {
+          toast.error(`${DAYS_ES[dow]}: la hora de fin debe ser mayor al inicio`);
+          return;
+        }
+      }
+    }
+    setSaving(true);
+    const allDrafts = Object.values(drafts).flat();
+    const results = await Promise.all(
+      allDrafts.map(d => supabase.from("schedules").update({
+        start_time: d.start + ":00",
+        end_time: d.end + ":00",
+        slot_minutes: Number(d.slotMin) || 45,
+        active: d.active,
+      }).eq("id", d.id))
+    );
+    setSaving(false);
+    const err = results.find(r => r.error);
+    if (err?.error) return toast.error(err.error.message);
+    toast.success("Horarios guardados");
+    load();
+  };
 
   return (
     <PanelLayout requireRole="admin">
@@ -68,17 +117,26 @@ const AdminSchedules = () => {
             <TabsTrigger value="bloqueos"><Lock className="h-3.5 w-3.5 mr-1" /> Bloqueos</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="agenda" className="space-y-3 mt-4">
-            {DAYS_ES.map((dayName, dow) => (
-              <DaySection
-                key={dow}
-                dayName={dayName}
-                dow={dow}
-                slots={barberSchedules.filter(s => s.day_of_week === dow)}
-                barberId={barberId}
-                onChanged={load}
-              />
-            ))}
+          <TabsContent value="agenda" className="mt-4">
+            <div className="flex justify-end mb-3">
+              <Button variant="gold" onClick={saveAll} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4 mr-1.5" /> Guardar horarios</>}
+              </Button>
+            </div>
+            <div className="space-y-3">
+              {DAYS_ES.map((dayName, dow) => (
+                <DaySection
+                  key={dow}
+                  dayName={dayName}
+                  dow={dow}
+                  slots={barberSchedules.filter(s => s.day_of_week === dow)}
+                  drafts={drafts[dow] ?? []}
+                  barberId={barberId}
+                  onDraftChange={(id, patch) => updateDraft(dow, id, patch)}
+                  onChanged={load}
+                />
+              ))}
+            </div>
           </TabsContent>
 
           <TabsContent value="bloqueos" className="mt-4">
@@ -90,45 +148,20 @@ const AdminSchedules = () => {
   );
 };
 
-type SlotDraft = { id: string; start: string; end: string; slotMin: string; active: boolean };
-
-const DaySection = ({ dayName, dow, slots, barberId, onChanged }: {
-  dayName: string; dow: number; slots: Schedule[]; barberId: string; onChanged: () => void;
+const DaySection = ({ dayName, dow, slots, drafts, barberId, onDraftChange, onChanged }: {
+  dayName: string;
+  dow: number;
+  slots: Schedule[];
+  drafts: SlotDraft[];
+  barberId: string;
+  onDraftChange: (id: string, patch: Partial<SlotDraft>) => void;
+  onChanged: () => void;
 }) => {
-  const [drafts, setDrafts] = useState<SlotDraft[]>(() =>
-    slots.map(s => ({ id: s.id, start: formatTime(s.start_time), end: formatTime(s.end_time), slotMin: String(s.slot_minutes), active: s.active }))
-  );
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    setDrafts(slots.map(s => ({ id: s.id, start: formatTime(s.start_time), end: formatTime(s.end_time), slotMin: String(s.slot_minutes), active: s.active })));
-  }, [slots]);
-
-  const update = (id: string, patch: Partial<SlotDraft>) =>
-    setDrafts(prev => prev.map(d => d.id === id ? { ...d, ...patch } : d));
-
   const addSlot = async () => {
     const { error } = await supabase.from("schedules").insert({
       barber_id: barberId, day_of_week: dow, start_time: "09:00:00", end_time: "18:00:00", slot_minutes: 45, active: true,
     });
     if (error) return toast.error(error.message);
-    onChanged();
-  };
-
-  const saveAll = async () => {
-    for (const d of drafts) {
-      if (d.start >= d.end) return toast.error(`${dayName}: la hora de fin debe ser mayor al inicio`);
-    }
-    setBusy(true);
-    const results = await Promise.all(
-      drafts.map(d => supabase.from("schedules").update({
-        start_time: d.start + ":00", end_time: d.end + ":00", slot_minutes: Number(d.slotMin) || 45, active: d.active,
-      }).eq("id", d.id))
-    );
-    setBusy(false);
-    const err = results.find(r => r.error);
-    if (err?.error) return toast.error(err.error.message);
-    toast.success("Guardado");
     onChanged();
   };
 
@@ -143,23 +176,16 @@ const DaySection = ({ dayName, dow, slots, barberId, onChanged }: {
     <div className="luxury-card p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-medium">{dayName}</h3>
-        <div className="flex gap-2">
-          {drafts.length > 0 && (
-            <Button size="sm" variant="gold" onClick={saveAll} disabled={busy}>
-              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Guardar"}
-            </Button>
-          )}
-          <Button size="sm" variant="goldOutline" onClick={addSlot}>
-            <Plus className="h-3.5 w-3.5" /> Agregar franja
-          </Button>
-        </div>
+        <Button size="sm" variant="goldOutline" onClick={addSlot}>
+          <Plus className="h-3.5 w-3.5" /> Agregar franja
+        </Button>
       </div>
       {drafts.length === 0 ? (
         <p className="text-xs text-muted-foreground italic">Día libre</p>
       ) : (
         <div className="space-y-2">
           {drafts.map(d => (
-            <ScheduleRow key={d.id} draft={d} onChange={patch => update(d.id, patch)} onRemove={() => remove(d.id)} />
+            <ScheduleRow key={d.id} draft={d} onChange={patch => onDraftChange(d.id, patch)} onRemove={() => remove(d.id)} />
           ))}
         </div>
       )}

@@ -46,6 +46,7 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [isReturningClient, setIsReturningClient] = useState(false);
+  const [existingClientId, setExistingClientId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -73,7 +74,7 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
   }, [barber, date, schedules]);
 
   const lookupPhone = async (p: string) => {
-    if (p.length < 6) { setIsReturningClient(false); return; }
+    if (p.length < 6) { setIsReturningClient(false); setExistingClientId(null); return; }
     setLookingUp(true);
     const { data } = await supabase.rpc("get_client_by_phone", { _phone: p });
     setLookingUp(false);
@@ -83,14 +84,16 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
       setLastName(c.last_name);
       setBirthDate(c.birth_date ?? "");
       setIsReturningClient(true);
+      setExistingClientId(c.id);
     } else {
       setIsReturningClient(false);
+      setExistingClientId(null);
     }
   };
 
   const reset = () => {
     setStep(1); setService(null); setBarber(null); setDate(undefined);
-    setTime(null); setFirstName(""); setLastName(""); setPhone(""); setBirthDate(""); setDone(false); setIsReturningClient(false);
+    setTime(null); setFirstName(""); setLastName(""); setPhone(""); setBirthDate(""); setDone(false); setIsReturningClient(false); setExistingClientId(null);
   };
 
   const handleClose = (o: boolean) => {
@@ -107,26 +110,46 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
     if (!service || !barber || !date || !time) return;
     setSubmitting(true);
 
-    // Upsert cliente por teléfono
-    const clientPayload: Record<string, unknown> = {
-      first_name: parsed.data.first_name,
-      last_name: parsed.data.last_name,
-      phone: parsed.data.client_phone,
-    };
-    if (!isReturningClient && parsed.data.birth_date) clientPayload.birth_date = parsed.data.birth_date;
-    const { data: clientData, error: clientError } = await supabase
-      .from("clients")
-      .upsert(clientPayload, { onConflict: "phone" })
-      .select("id")
-      .single();
+    // Resolver ID del cliente
+    let resolvedClientId: string;
 
-    if (clientError) { setSubmitting(false); toast.error(clientError.message); return; }
+    if (isReturningClient && existingClientId) {
+      // Cliente ya reconocido por teléfono, usar su ID directamente
+      resolvedClientId = existingClientId;
+    } else {
+      // Cliente nuevo: INSERT puro (upsert falla por RLS con anon en UPDATE)
+      const { data: inserted, error: insertError } = await supabase
+        .from("clients")
+        .insert({
+          first_name: parsed.data.first_name,
+          last_name: parsed.data.last_name,
+          phone: parsed.data.client_phone,
+          ...(parsed.data.birth_date ? { birth_date: parsed.data.birth_date } : {}),
+        })
+        .select("id")
+        .single();
+
+      if (insertError) {
+        if (insertError.code === "23505") {
+          // Teléfono ya existía (race condition), buscar su ID
+          const { data: existing } = await supabase.rpc("get_client_by_phone", { _phone: parsed.data.client_phone });
+          if (!existing || existing.length === 0) { setSubmitting(false); toast.error("Error al registrar el cliente."); return; }
+          resolvedClientId = existing[0].id;
+        } else {
+          setSubmitting(false);
+          toast.error(insertError.message);
+          return;
+        }
+      } else {
+        resolvedClientId = inserted.id;
+      }
+    }
 
     const fullName = `${parsed.data.first_name} ${parsed.data.last_name}`;
     const { error } = await supabase.from("appointments").insert({
       client_name: fullName,
       client_phone: parsed.data.client_phone,
-      client_id: clientData.id,
+      client_id: resolvedClientId,
       service_id: service.id,
       service_name: service.name,
       service_price: service.price,
