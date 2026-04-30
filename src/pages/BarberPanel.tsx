@@ -86,6 +86,9 @@ const BarberPanel = () => {
                 <button onClick={() => setView("day")} className={cn("px-3 py-1.5 text-sm", view === "day" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>Día</button>
                 <button onClick={() => setView("week")} className={cn("px-3 py-1.5 text-sm", view === "week" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>Semana</button>
               </div>
+              <Button variant="goldOutline" size="sm" onClick={() => setBlockOpen(true)}>
+                <Lock className="h-3.5 w-3.5" /> Bloquear
+              </Button>
               <Button variant="outline" size="icon" onClick={() => navigate(-1)}><ChevronLeft className="h-4 w-4" /></Button>
               <Button variant="outline" size="sm" onClick={() => setDate(() => { const d = new Date(); d.setHours(0,0,0,0); return d; })}>Hoy</Button>
               <Button variant="outline" size="icon" onClick={() => navigate(1)}><ChevronRight className="h-4 w-4" /></Button>
