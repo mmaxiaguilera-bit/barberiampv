@@ -7,7 +7,8 @@ import { AppointmentSheet } from "@/components/AppointmentSheet";
 import { StatusBadge } from "@/components/StatusBadge";
 import { DAYS_SHORT, formatTime, toISODate } from "@/lib/booking";
 import { Database } from "@/integrations/supabase/types";
-import { CalendarDays, ChevronLeft, ChevronRight, Loader2, Phone, Scissors } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Loader2, Lock, Phone, Scissors } from "lucide-react";
+import { BlockSlotDialog } from "@/components/BlockSlotDialog";
 import { cn } from "@/lib/utils";
 
 type Appt = Database["public"]["Tables"]["appointments"]["Row"];
