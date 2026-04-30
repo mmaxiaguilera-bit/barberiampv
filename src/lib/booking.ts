@@ -46,21 +46,34 @@ export const getAvailableSlots = async (
   if (!sched) return [];
   const allSlots = generateSlots(sched);
 
-  const { data: taken } = await supabase.rpc("get_taken_slots", {
-    _barber_id: barberId,
-    _date: toISODate(date),
-  });
+  const isoDate = toISODate(date);
+  const [{ data: taken }, { data: blocks }] = await Promise.all([
+    supabase.rpc("get_taken_slots", { _barber_id: barberId, _date: isoDate }),
+    supabase.rpc("get_blocked_ranges", { _barber_id: barberId, _date: isoDate }),
+  ]);
   const takenSet = new Set((taken ?? []).map((r: any) => r.appointment_time.slice(0, 5)));
+  const blockRanges = (blocks ?? []) as { start_time: string | null; end_time: string | null; full_day: boolean }[];
+  const hasFullDayBlock = blockRanges.some(b => b.full_day);
+  if (hasFullDayBlock) return [];
+
+  const blockedMinuteRanges = blockRanges
+    .filter(b => !b.full_day && b.start_time && b.end_time)
+    .map(b => [timeToMinutes(b.start_time as string), timeToMinutes(b.end_time as string)] as const);
 
   // filter past slots if today
   const now = new Date();
-  const isToday = toISODate(date) === toISODate(now);
+  const isToday = isoDate === toISODate(now);
   const nowMins = now.getHours() * 60 + now.getMinutes();
 
   return allSlots.filter(s => {
     const hhmm = s.slice(0, 5);
     if (takenSet.has(hhmm)) return false;
-    if (isToday && timeToMinutes(s) <= nowMins) return false;
+    const slotStart = timeToMinutes(s);
+    const slotEnd = slotStart + sched.slot_minutes;
+    for (const [bs, be] of blockedMinuteRanges) {
+      if (slotStart < be && slotEnd > bs) return false;
+    }
+    if (isToday && slotStart <= nowMins) return false;
     return true;
   });
 };

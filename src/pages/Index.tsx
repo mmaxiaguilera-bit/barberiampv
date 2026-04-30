@@ -150,8 +150,9 @@ const Index = () => {
       </section>
 
       <footer className="border-t border-border py-10 text-center text-xs text-muted-foreground">
-        <div className="container px-4">
-          © {new Date().getFullYear()} MVP Barber · Premium Barber Studio · Rada Tilly
+        <div className="container px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <span>© {new Date().getFullYear()} MVP Barber · Premium Barber Studio · Rada Tilly</span>
+          <a href="/auth" className="text-muted-foreground/60 hover:text-primary transition-colors">Staff</a>
         </div>
       </footer>
 
