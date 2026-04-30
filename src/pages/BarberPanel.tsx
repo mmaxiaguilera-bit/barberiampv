@@ -28,6 +28,7 @@ const BarberPanel = () => {
   const [appointments, setAppointments] = useState<Appt[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Appt | null>(null);
+  const [blockOpen, setBlockOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
