@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { Logo } from "@/components/Logo";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -24,6 +24,7 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showPass, setShowPass] = useState(false);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   if (user) return <Navigate to={role === "admin" ? "/admin" : "/panel"} replace />;
@@ -88,7 +89,15 @@ const Auth = () => {
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div><Label htmlFor="e1">Email</Label><Input id="e1" type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
-                  <div><Label htmlFor="p1">Contraseña</Label><Input id="p1" type="password" value={password} onChange={e => setPassword(e.target.value)} /></div>
+                  <div>
+                    <Label htmlFor="p1">Contraseña</Label>
+                    <div className="relative">
+                      <Input id="p1" type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="pr-10" />
+                      <button type="button" onClick={() => setShowPass(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                        {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
                   <Button variant="gold" className="w-full" disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar"}</Button>
                 </form>
               </TabsContent>
@@ -96,7 +105,15 @@ const Auth = () => {
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div><Label htmlFor="n2">Nombre</Label><Input id="n2" value={name} onChange={e => setName(e.target.value)} /></div>
                   <div><Label htmlFor="e2">Email</Label><Input id="e2" type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
-                  <div><Label htmlFor="p2">Contraseña</Label><Input id="p2" type="password" value={password} onChange={e => setPassword(e.target.value)} /></div>
+                  <div>
+                    <Label htmlFor="p2">Contraseña</Label>
+                    <div className="relative">
+                      <Input id="p2" type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="pr-10" />
+                      <button type="button" onClick={() => setShowPass(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                        {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
                   <Button variant="gold" className="w-full" disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Registrarme"}</Button>
                 </form>
               </TabsContent>
