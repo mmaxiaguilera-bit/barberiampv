@@ -7,7 +7,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Barber, Schedule, Service, formatPrice, formatTime, getAvailableSlots, toISODate } from "@/lib/booking";
-import { CalendarIcon, Check, ChevronRight, Loader2, Scissors, User, Phone } from "lucide-react";
+import { CalendarIcon, Check, ChevronRight, Loader2, User, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { es } from "date-fns/locale";
@@ -18,8 +18,10 @@ interface BookingDialogProps {
 }
 
 const formSchema = z.object({
-  client_name: z.string().trim().min(2, "Mínimo 2 caracteres").max(100),
+  first_name: z.string().trim().min(2, "Nombre: mínimo 2 caracteres").max(50),
+  last_name: z.string().trim().min(2, "Apellido: mínimo 2 caracteres").max(50),
   client_phone: z.string().trim().min(6, "Teléfono inválido").max(25),
+  birth_date: z.string().min(1, "Ingresá tu fecha de nacimiento"),
 });
 
 export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
@@ -36,8 +38,11 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
   const [time, setTime] = useState<string | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [lookingUp, setLookingUp] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -66,9 +71,22 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
       .finally(() => setLoadingSlots(false));
   }, [barber, date, schedules]);
 
+  const lookupPhone = async (p: string) => {
+    if (p.length < 6) return;
+    setLookingUp(true);
+    const { data } = await supabase.rpc("get_client_by_phone", { _phone: p });
+    setLookingUp(false);
+    if (data && data.length > 0) {
+      const c = data[0];
+      setFirstName(c.first_name);
+      setLastName(c.last_name);
+      setBirthDate(c.birth_date ?? "");
+    }
+  };
+
   const reset = () => {
     setStep(1); setService(null); setBarber(null); setDate(undefined);
-    setTime(null); setName(""); setPhone(""); setDone(false);
+    setTime(null); setFirstName(""); setLastName(""); setPhone(""); setBirthDate(""); setDone(false);
   };
 
   const handleClose = (o: boolean) => {
@@ -77,16 +95,33 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
   };
 
   const submit = async () => {
-    const parsed = formSchema.safeParse({ client_name: name, client_phone: phone });
+    const parsed = formSchema.safeParse({ first_name: firstName, last_name: lastName, client_phone: phone, birth_date: birthDate });
     if (!parsed.success) {
       toast.error(parsed.error.issues[0].message);
       return;
     }
     if (!service || !barber || !date || !time) return;
     setSubmitting(true);
+
+    // Upsert cliente por teléfono
+    const { data: clientData, error: clientError } = await supabase
+      .from("clients")
+      .upsert({
+        first_name: parsed.data.first_name,
+        last_name: parsed.data.last_name,
+        phone: parsed.data.client_phone,
+        birth_date: parsed.data.birth_date,
+      }, { onConflict: "phone" })
+      .select("id")
+      .single();
+
+    if (clientError) { setSubmitting(false); toast.error(clientError.message); return; }
+
+    const fullName = `${parsed.data.first_name} ${parsed.data.last_name}`;
     const { error } = await supabase.from("appointments").insert({
-      client_name: parsed.data.client_name,
+      client_name: fullName,
       client_phone: parsed.data.client_phone,
+      client_id: clientData.id,
       service_id: service.id,
       service_name: service.name,
       service_price: service.price,
@@ -249,12 +284,33 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
                   </div>
                   <div className="space-y-3">
                     <div>
-                      <Label htmlFor="name" className="flex items-center gap-2"><User className="h-3.5 w-3.5" /> Nombre completo</Label>
-                      <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Juan Pérez" maxLength={100} />
+                      <Label htmlFor="phone" className="flex items-center gap-2"><Phone className="h-3.5 w-3.5" /> Teléfono</Label>
+                      <div className="relative">
+                        <Input
+                          id="phone"
+                          value={phone}
+                          onChange={e => { setPhone(e.target.value); lookupPhone(e.target.value); }}
+                          placeholder="+54 9 ..."
+                          maxLength={25}
+                          className={lookingUp ? "pr-9" : ""}
+                        />
+                        {lookingUp && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+                      </div>
+                      {firstName && <p className="text-xs text-primary mt-1">✓ Cliente frecuente reconocido</p>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label htmlFor="firstName" className="flex items-center gap-2"><User className="h-3.5 w-3.5" /> Nombre</Label>
+                        <Input id="firstName" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Juan" maxLength={50} />
+                      </div>
+                      <div>
+                        <Label htmlFor="lastName">Apellido</Label>
+                        <Input id="lastName" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Pérez" maxLength={50} />
+                      </div>
                     </div>
                     <div>
-                      <Label htmlFor="phone" className="flex items-center gap-2"><Phone className="h-3.5 w-3.5" /> Teléfono</Label>
-                      <Input id="phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+54 9 ..." maxLength={25} />
+                      <Label htmlFor="birthDate" className="flex items-center gap-2"><CalendarIcon className="h-3.5 w-3.5" /> Fecha de nacimiento</Label>
+                      <Input id="birthDate" type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} />
                     </div>
                   </div>
                 </div>

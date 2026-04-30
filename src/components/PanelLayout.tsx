@@ -3,7 +3,7 @@ import { Navigate, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { Loader2, LogOut, LayoutDashboard, CalendarDays, Users, Scissors, UserCog, Wallet, BarChart3, Clock } from "lucide-react";
+import { Loader2, LogOut, LayoutDashboard, CalendarDays, Users, Users2, Scissors, UserCog, Wallet, BarChart3, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -29,10 +29,12 @@ export const PanelLayout = ({ children, requireRole = "any" }: Props) => {
     { to: "/admin/servicios", icon: Scissors, label: "Servicios" },
     { to: "/admin/horarios", icon: Clock, label: "Horarios" },
     { to: "/admin/barberos", icon: Users, label: "Barberos" },
+    { to: "/admin/clientes", icon: Users2, label: "Clientes" },
     { to: "/admin/usuarios", icon: UserCog, label: "Usuarios" },
   ];
   const barberLinks = [
     { to: "/panel", icon: CalendarDays, label: "Mis turnos", end: true },
+    { to: "/admin/clientes", icon: Users2, label: "Clientes" },
   ];
   const links = role === "admin" ? adminLinks : barberLinks;
 
