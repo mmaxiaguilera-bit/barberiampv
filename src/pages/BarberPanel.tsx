@@ -111,6 +111,16 @@ const BarberPanel = () => {
         onOpenChange={(o) => !o && setSelected(null)}
         onChanged={load}
       />
+
+      {barberId && (
+        <BlockSlotDialog
+          open={blockOpen}
+          onOpenChange={setBlockOpen}
+          barberId={barberId}
+          defaultDate={date}
+          defaultReason="Reservado por WhatsApp"
+        />
+      )}
     </PanelLayout>
   );
 };
