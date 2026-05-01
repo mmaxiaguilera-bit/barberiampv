@@ -45,6 +45,11 @@ export const AppointmentSheet = ({ appointment, open, onOpenChange, onChanged, c
       .eq("id", appointment.id);
     setSaving(false);
     if (error) return toast.error(error.message);
+    if (status === "cancelado" && appointment.status !== "cancelado") {
+      supabase.functions.invoke("send-cancellation-email", {
+        body: { appointment_id: appointment.id },
+      }).catch(() => {});
+    }
     toast.success("Turno actualizado");
     onChanged();
     onOpenChange(false);

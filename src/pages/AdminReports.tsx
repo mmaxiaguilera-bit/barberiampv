@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PanelLayout } from "@/components/PanelLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Database } from "@/integrations/supabase/types";
 import { formatPrice } from "@/lib/booking";
 import { paymentMethodLabel, PAYMENT_METHODS } from "@/lib/cash";
@@ -20,6 +20,16 @@ const monthLabel = (m: string) => {
 const AdminReports = () => {
   const today = new Date();
   const [month, setMonth] = useState(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`);
+
+  const monthOptions = useMemo(() => {
+    const opts = [];
+    for (let i = 0; i < 24; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      opts.push({ value: val, label: d.toLocaleDateString("es-AR", { month: "long", year: "numeric" }) });
+    }
+    return opts;
+  }, []);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,7 +124,16 @@ const AdminReports = () => {
           <p className="text-sm text-muted-foreground capitalize">{monthLabel(month)}</p>
         </div>
         <div className="flex gap-2">
-          <Input type="month" value={month} onChange={e => setMonth(e.target.value)} className="w-[170px]" />
+          <Select value={month} onValueChange={setMonth}>
+            <SelectTrigger className="w-[190px] capitalize">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map(o => (
+                <SelectItem key={o.value} value={o.value} className="capitalize">{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="sm" onClick={exportCSV}><Download className="h-4 w-4" /> CSV</Button>
         </div>
       </div>

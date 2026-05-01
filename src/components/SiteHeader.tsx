@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Logo } from "./Logo";
 import { Button } from "./ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { LogOut, User as UserIcon } from "lucide-react";
+import { LogOut, User as UserIcon, CalendarSearch } from "lucide-react";
 
 export const SiteHeader = () => {
   const { user, role, signOut } = useAuth();
@@ -21,6 +21,9 @@ export const SiteHeader = () => {
           <a href="#ubicacion" className="hidden sm:inline text-sm text-muted-foreground hover:text-foreground transition-colors px-3">
             Ubicación
           </a>
+          <Link to="/mi-turno" className="hidden sm:inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-3">
+            <CalendarSearch className="h-3.5 w-3.5" /> Mi turno
+          </Link>
           {user ? (
             <>
               <Button

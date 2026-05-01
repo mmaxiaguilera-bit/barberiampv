@@ -7,7 +7,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Barber, Schedule, Service, formatPrice, formatTime, getAvailableSlots, toISODate } from "@/lib/booking";
-import { CalendarIcon, Check, ChevronRight, Loader2, User, Phone } from "lucide-react";
+import { CalendarIcon, Check, ChevronRight, Loader2, User, Phone, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { es } from "date-fns/locale";
@@ -41,6 +41,7 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [lookingUp, setLookingUp] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -83,6 +84,7 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
       setFirstName(c.first_name);
       setLastName(c.last_name);
       setBirthDate(c.birth_date ?? "");
+      setEmail((c as any).email ?? "");
       setIsReturningClient(true);
       setExistingClientId(c.id);
     } else {
@@ -93,7 +95,7 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
 
   const reset = () => {
     setStep(1); setService(null); setBarber(null); setDate(undefined);
-    setTime(null); setFirstName(""); setLastName(""); setPhone(""); setBirthDate(""); setDone(false); setIsReturningClient(false); setExistingClientId(null);
+    setTime(null); setFirstName(""); setLastName(""); setPhone(""); setEmail(""); setBirthDate(""); setDone(false); setIsReturningClient(false); setExistingClientId(null);
   };
 
   const handleClose = (o: boolean) => {
@@ -125,6 +127,7 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
           last_name: parsed.data.last_name,
           phone: parsed.data.client_phone,
           ...(parsed.data.birth_date ? { birth_date: parsed.data.birth_date } : {}),
+          ...(email.trim() ? { email: email.trim() } : {}),
         })
         .select("id")
         .single();
@@ -340,6 +343,12 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
                         </Label>
                         <Input id="lastName" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Pérez" maxLength={50} />
                       </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="email" className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-1.5">
+                        <Mail className="h-3 w-3" /> Email <span className="text-muted-foreground/60 normal-case">(opcional, para notificaciones)</span>
+                      </Label>
+                      <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" maxLength={255} />
                     </div>
                     {!isReturningClient && (
                       <div>
