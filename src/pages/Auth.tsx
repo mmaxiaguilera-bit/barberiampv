@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { Logo } from "@/components/Logo";
 import { ArrowLeft, Loader2, Eye, EyeOff } from "lucide-react";
@@ -22,7 +21,6 @@ const Auth = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
@@ -38,23 +36,6 @@ const Auth = () => {
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success("¡Bienvenido!");
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const parsed = schema.safeParse({ email, password });
-    if (!parsed.success) return toast.error(parsed.error.issues[0].message);
-    setBusy(true);
-    const { error } = await supabase.auth.signUp({
-      ...(parsed.data as Creds),
-      options: {
-        emailRedirectTo: `${window.location.origin}/panel`,
-        data: { full_name: name },
-      },
-    });
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success("Cuenta creada. Verificá tu email.");
   };
 
   const handleGoogle = async () => {
@@ -81,43 +62,19 @@ const Auth = () => {
             <p className="text-sm text-muted-foreground">Solo para barberos y administración</p>
           </div>
           <div className="luxury-card p-6">
-            <Tabs defaultValue="signin">
-              <TabsList className="grid grid-cols-2 w-full mb-6">
-                <TabsTrigger value="signin">Iniciar sesión</TabsTrigger>
-                <TabsTrigger value="signup">Crear cuenta</TabsTrigger>
-              </TabsList>
-              <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div><Label htmlFor="e1">Email</Label><Input id="e1" type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
-                  <div>
-                    <Label htmlFor="p1">Contraseña</Label>
-                    <div className="relative">
-                      <Input id="p1" type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="pr-10" />
-                      <button type="button" onClick={() => setShowPass(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                        {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-                  <Button variant="gold" className="w-full" disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar"}</Button>
-                </form>
-              </TabsContent>
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div><Label htmlFor="n2">Nombre</Label><Input id="n2" value={name} onChange={e => setName(e.target.value)} /></div>
-                  <div><Label htmlFor="e2">Email</Label><Input id="e2" type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
-                  <div>
-                    <Label htmlFor="p2">Contraseña</Label>
-                    <div className="relative">
-                      <Input id="p2" type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="pr-10" />
-                      <button type="button" onClick={() => setShowPass(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                        {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-                  <Button variant="gold" className="w-full" disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Registrarme"}</Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div><Label htmlFor="e1">Email</Label><Input id="e1" type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
+              <div>
+                <Label htmlFor="p1">Contraseña</Label>
+                <div className="relative">
+                  <Input id="p1" type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="pr-10" />
+                  <button type="button" onClick={() => setShowPass(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <Button variant="gold" className="w-full" disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar"}</Button>
+            </form>
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
               <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">o</span></div>

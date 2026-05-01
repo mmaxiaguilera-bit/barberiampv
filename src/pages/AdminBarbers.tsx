@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Barber } from "@/lib/booking";
-import { Pencil, Plus, Loader2, User } from "lucide-react";
+import { Pencil, Plus, Loader2, User, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 const AdminBarbers = () => {
@@ -16,6 +16,7 @@ const AdminBarbers = () => {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Barber | null>(null);
   const [open, setOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -35,10 +36,18 @@ const AdminBarbers = () => {
           <h1 className="font-serif text-2xl sm:text-3xl">Barberos</h1>
           <p className="text-sm text-muted-foreground">Gestioná tu equipo</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button variant="gold" size="sm" onClick={startNew}><Plus className="h-4 w-4" /> Nuevo</Button></DialogTrigger>
-          <BarberDialog editing={editing} onClose={() => { setOpen(false); load(); }} />
-        </Dialog>
+        <div className="flex gap-2">
+          <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+            <DialogTrigger asChild>
+              <Button variant="goldOutline" size="sm"><Mail className="h-4 w-4" /> Invitar barbero</Button>
+            </DialogTrigger>
+            <InviteDialog onClose={() => setInviteOpen(false)} />
+          </Dialog>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild><Button variant="gold" size="sm" onClick={startNew}><Plus className="h-4 w-4" /> Nuevo</Button></DialogTrigger>
+            <BarberDialog editing={editing} onClose={() => { setOpen(false); load(); }} />
+          </Dialog>
+        </div>
       </div>
 
       {loading ? (
@@ -101,6 +110,52 @@ const BarberDialog = ({ editing, onClose }: { editing: Barber | null; onClose: (
         </div>
         <Button variant="gold" className="w-full" onClick={save} disabled={busy}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
+        </Button>
+      </div>
+    </DialogContent>
+  );
+};
+
+const InviteDialog = ({ onClose }: { onClose: () => void }) => {
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const send = async () => {
+    if (!email.trim()) return toast.error("Email requerido");
+    setBusy(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-barber`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ email: email.trim(), name: name.trim() }),
+      }
+    );
+    const json = await res.json();
+    setBusy(false);
+    if (!res.ok) return toast.error(json.error ?? "Error al enviar invitación");
+    toast.success(`Invitación enviada a ${email}`);
+    onClose();
+  };
+
+  return (
+    <DialogContent className="max-w-md">
+      <DialogHeader>
+        <DialogTitle className="font-serif text-2xl flex items-center gap-2">
+          <Mail className="h-5 w-5 text-primary" /> Invitar barbero
+        </DialogTitle>
+      </DialogHeader>
+      <p className="text-sm text-muted-foreground">Le llegará un email para que pueda crear su contraseña y acceder al panel.</p>
+      <div className="space-y-3">
+        <div><Label>Nombre (opcional)</Label><Input value={name} onChange={e => setName(e.target.value)} placeholder="Ej: Ezequiel" /></div>
+        <div><Label>Email</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="barbero@email.com" /></div>
+        <Button variant="gold" className="w-full" onClick={send} disabled={busy}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar invitación"}
         </Button>
       </div>
     </DialogContent>
