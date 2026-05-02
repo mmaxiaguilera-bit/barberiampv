@@ -17,6 +17,8 @@ import AdminCash from "./pages/AdminCash.tsx";
 import AdminReports from "./pages/AdminReports.tsx";
 import AdminClients from "./pages/AdminClients.tsx";
 import MyAppointment from "./pages/MyAppointment.tsx";
+import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
+import TermsOfUse from "./pages/TermsOfUse.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -42,6 +44,8 @@ const App = () => (
             <Route path="/admin/usuarios" element={<AdminUsers />} />
             <Route path="/admin/clientes" element={<AdminClients />} />
             <Route path="/mi-turno" element={<MyAppointment />} />
+            <Route path="/privacidad" element={<PrivacyPolicy />} />
+            <Route path="/terminos" element={<TermsOfUse />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

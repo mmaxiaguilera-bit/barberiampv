@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -149,10 +150,23 @@ const Index = () => {
         </div>
       </section>
 
-      <footer className="border-t border-border py-10 text-center text-xs text-muted-foreground">
-        <div className="container px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <span>© {new Date().getFullYear()} MVP Barber · Premium Barber Studio · Rada Tilly</span>
-          <a href="/auth" className="text-muted-foreground/60 hover:text-primary transition-colors">Staff</a>
+      <footer className="border-t border-border py-10 text-xs text-muted-foreground">
+        <div className="container px-4 space-y-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-center sm:text-left">
+              <span>© {new Date().getFullYear()} MVP Barber · Premium Barber Studio</span>
+              <span className="hidden sm:inline text-border">|</span>
+              <span>Rada Tilly, Chubut, Argentina</span>
+              <span className="hidden sm:inline text-border">|</span>
+              <a href="mailto:contacto@barberiampv.com" className="hover:text-primary transition-colors">contacto@barberiampv.com</a>
+            </div>
+            <a href="/auth" className="text-muted-foreground/60 hover:text-primary transition-colors">Staff</a>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-2 border-t border-border/40">
+            <Link to="/privacidad" className="hover:text-primary transition-colors">Política de Privacidad</Link>
+            <span className="text-border">·</span>
+            <Link to="/terminos" className="hover:text-primary transition-colors">Términos y Condiciones</Link>
+          </div>
         </div>
       </footer>
 
