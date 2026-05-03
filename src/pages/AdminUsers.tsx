@@ -65,6 +65,8 @@ const AdminUsers = () => {
   };
 
   const filtered = profiles.filter(p => {
+    // solo mostrar usuarios que ya tienen al menos un rol asignado
+    if (rolesFor(p.id).length === 0) return false;
     const q = filter.trim().toLowerCase();
     if (!q) return true;
     return (p.email ?? "").toLowerCase().includes(q) || (p.full_name ?? "").toLowerCase().includes(q);

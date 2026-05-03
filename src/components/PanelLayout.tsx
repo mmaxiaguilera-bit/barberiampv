@@ -105,7 +105,7 @@ const NoRoleScreen = () => {
   };
 
   const requestAccess = async () => {
-    const { error } = await supabase.from("access_requests").insert({ user_id: user!.id, status: "pending" });
+    const { error } = await supabase.from("access_requests").upsert({ user_id: user!.id, status: "pending" }, { onConflict: "user_id" });
     if (error) return alert(error.message);
     setState("pending");
   };
