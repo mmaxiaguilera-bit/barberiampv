@@ -4,30 +4,34 @@ import { PanelLayout } from "@/components/PanelLayout";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader2, Shield, Scissors, UserCog, Trash2, Link2 } from "lucide-react";
+import { Loader2, Shield, Scissors, UserCog, Trash2, Link2, Bell, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 type Profile = { id: string; email: string | null; full_name: string | null };
 type RoleRow = { user_id: string; role: "admin" | "barber" };
 type Barber = { id: string; name: string; user_id: string | null; active: boolean };
+type AccessRequest = { id: string; user_id: string; created_at: string };
 
 const AdminUsers = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: p }, { data: r }, { data: b }] = await Promise.all([
+    const [{ data: p }, { data: r }, { data: b }, { data: req }] = await Promise.all([
       supabase.from("profiles").select("id, email, full_name").order("created_at", { ascending: false }),
       supabase.from("user_roles").select("user_id, role"),
       supabase.from("barbers").select("id, name, user_id, active").order("display_order"),
+      supabase.from("access_requests").select("id, user_id, created_at").eq("status", "pending").order("created_at", { ascending: true }),
     ]);
     setProfiles(p ?? []);
     setRoles((r ?? []) as RoleRow[]);
     setBarbers(b ?? []);
+    setRequests(req ?? []);
     setLoading(false);
   }, []);
 
@@ -66,6 +70,22 @@ const AdminUsers = () => {
     return (p.email ?? "").toLowerCase().includes(q) || (p.full_name ?? "").toLowerCase().includes(q);
   });
 
+  const approveRequest = async (req: AccessRequest) => {
+    const { error: roleError } = await supabase.from("user_roles").insert({ user_id: req.user_id, role: "barber" });
+    if (roleError) return toast.error(roleError.message);
+    await supabase.from("access_requests").update({ status: "approved" }).eq("id", req.id);
+    toast.success("Usuario aceptado como barbero");
+    load();
+  };
+
+  const rejectRequest = async (req: AccessRequest) => {
+    await supabase.from("access_requests").update({ status: "rejected" }).eq("id", req.id);
+    toast.success("Solicitud rechazada");
+    load();
+  };
+
+  const profileFor = (uid: string) => profiles.find(p => p.id === uid);
+
   const unlinkedBarbers = barbers.filter(b => !b.user_id);
 
   return (
@@ -74,6 +94,39 @@ const AdminUsers = () => {
         <h1 className="font-serif text-2xl sm:text-3xl flex items-center gap-2"><UserCog className="h-6 w-6 text-primary" /> Usuarios y roles</h1>
         <p className="text-sm text-muted-foreground">Asigná roles y vinculá usuarios con perfiles de barbero</p>
       </div>
+
+      {requests.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-sm font-medium flex items-center gap-2 mb-3">
+            <Bell className="h-4 w-4 text-primary" />
+            Solicitudes pendientes
+            <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+              {requests.length}
+            </span>
+          </h2>
+          <div className="space-y-2">
+            {requests.map(req => {
+              const profile = profileFor(req.user_id);
+              return (
+                <div key={req.id} className="luxury-card p-4 flex items-center justify-between gap-3 border-l-2 border-primary">
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{profile?.full_name || "(sin nombre)"}</div>
+                    <div className="text-xs text-muted-foreground truncate">{profile?.email ?? req.user_id}</div>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button size="sm" variant="ghost" onClick={() => rejectRequest(req)}>
+                      <X className="h-3.5 w-3.5" /> Rechazar
+                    </Button>
+                    <Button size="sm" variant="gold" onClick={() => approveRequest(req)}>
+                      <Check className="h-3.5 w-3.5" /> Aceptar
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="mb-4">
         <Input placeholder="Buscar por nombre o email…" value={filter} onChange={e => setFilter(e.target.value)} />

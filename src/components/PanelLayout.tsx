@@ -1,10 +1,11 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Navigate, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { Loader2, LogOut, LayoutDashboard, CalendarDays, Users, Users2, Scissors, UserCog, Wallet, BarChart3, Clock } from "lucide-react";
+import { Loader2, LogOut, LayoutDashboard, CalendarDays, Users, Users2, Scissors, UserCog, Wallet, BarChart3, Clock, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   children: ReactNode;
@@ -76,29 +77,108 @@ export const PanelLayout = ({ children, requireRole = "any" }: Props) => {
   );
 };
 
+type NoRoleState = "checking" | "no_admin" | "pending" | "no_request" | "rejected";
+
 const NoRoleScreen = () => {
   const { user, refreshRole, signOut } = useAuth();
   const navigate = useNavigate();
-  const claim = async () => {
-    const { supabase } = await import("@/integrations/supabase/client");
+  const [state, setState] = useState<NoRoleState>("checking");
+
+  useEffect(() => {
+    const check = async () => {
+      const [{ data: admins }, { data: request }] = await Promise.all([
+        supabase.from("user_roles").select("user_id").eq("role", "admin").limit(1),
+        supabase.from("access_requests").select("status").eq("user_id", user!.id).maybeSingle(),
+      ]);
+
+      if (!admins || admins.length === 0) { setState("no_admin"); return; }
+      if (!request) { setState("no_request"); return; }
+      setState(request.status === "pending" ? "pending" : "rejected");
+    };
+    check();
+  }, [user]);
+
+  const claimFirstAdmin = async () => {
     const { data, error } = await supabase.rpc("claim_first_admin");
     if (error) return alert(error.message);
-    if (data) { await refreshRole(); }
-    else alert("Ya hay un administrador. Pedile que te asigne un rol.");
+    if (data) await refreshRole();
   };
+
+  const requestAccess = async () => {
+    const { error } = await supabase.from("access_requests").insert({ user_id: user!.id, status: "pending" });
+    if (error) return alert(error.message);
+    setState("pending");
+  };
+
+  const checkStatus = async () => {
+    await refreshRole();
+    const { data } = await supabase.from("access_requests").select("status").eq("user_id", user!.id).maybeSingle();
+    if (!data) { setState("no_request"); return; }
+    setState(data.status === "pending" ? "pending" : "rejected");
+  };
+
+  const handleSignOut = async () => { await signOut(); navigate("/"); };
+
+  if (state === "checking") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (state === "no_admin") {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="luxury-card p-6 max-w-md w-full text-center space-y-4">
+          <Scissors className="h-10 w-10 text-primary mx-auto" />
+          <h1 className="font-serif text-2xl">Tu cuenta no tiene rol asignado</h1>
+          <p className="text-sm text-muted-foreground">
+            Hola {user?.email}. Todavía no hay ningún administrador en el sistema.
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={handleSignOut}>Salir</Button>
+            <Button variant="gold" className="flex-1" onClick={claimFirstAdmin}>Soy el primer admin</Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">Esta opción solo funciona si todavía no existe ningún admin en el sistema.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (state === "pending") {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="luxury-card p-6 max-w-md w-full text-center space-y-4">
+          <CheckCircle2 className="h-10 w-10 text-primary mx-auto" />
+          <h1 className="font-serif text-2xl">Solicitud enviada</h1>
+          <p className="text-sm text-muted-foreground">
+            Tu solicitud fue enviada correctamente. El administrador la revisará pronto y te asignará un rol.
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={handleSignOut}>Salir</Button>
+            <Button variant="gold" className="flex-1" onClick={checkStatus}>Verificar estado</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // no_request or rejected
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="luxury-card p-6 max-w-md w-full text-center space-y-4">
         <Scissors className="h-10 w-10 text-primary mx-auto" />
         <h1 className="font-serif text-2xl">Tu cuenta no tiene rol asignado</h1>
         <p className="text-sm text-muted-foreground">
-          Hola {user?.email}. Pedile a un administrador que te asigne un rol (admin o barbero).
+          {state === "rejected"
+            ? `Hola ${user?.email}. Tu solicitud anterior fue rechazada. Podés volver a solicitar acceso.`
+            : `Hola ${user?.email}. Enviá una solicitud al administrador para que te asigne un rol.`}
         </p>
         <div className="flex gap-2">
-          <Button variant="outline" className="flex-1" onClick={async () => { await signOut(); navigate("/"); }}>Salir</Button>
-          <Button variant="gold" className="flex-1" onClick={claim}>Soy el primer admin</Button>
+          <Button variant="outline" className="flex-1" onClick={handleSignOut}>Salir</Button>
+          <Button variant="gold" className="flex-1" onClick={requestAccess}>Solicitar acceso</Button>
         </div>
-        <p className="text-[11px] text-muted-foreground">Esta opción solo funciona si todavía no existe ningún admin en el sistema.</p>
       </div>
     </div>
   );
