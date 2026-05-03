@@ -429,6 +429,7 @@ export type Database = {
     }
     Functions: {
       claim_first_admin: { Args: never; Returns: boolean }
+      has_any_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
       get_blocked_ranges: {
         Args: { _barber_id: string; _date: string }
         Returns: {

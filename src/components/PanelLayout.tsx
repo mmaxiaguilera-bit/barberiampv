@@ -86,12 +86,12 @@ const NoRoleScreen = () => {
 
   useEffect(() => {
     const check = async () => {
-      const [{ data: admins }, { data: request }] = await Promise.all([
-        supabase.from("user_roles").select("user_id").eq("role", "admin").limit(1),
+      const [{ data: anyAdmin }, { data: request }] = await Promise.all([
+        supabase.rpc("has_any_admin"),
         supabase.from("access_requests").select("status").eq("user_id", user!.id).maybeSingle(),
       ]);
 
-      if (!admins || admins.length === 0) { setState("no_admin"); return; }
+      if (!anyAdmin) { setState("no_admin"); return; }
       if (!request) { setState("no_request"); return; }
       setState(request.status === "pending" ? "pending" : "rejected");
     };
