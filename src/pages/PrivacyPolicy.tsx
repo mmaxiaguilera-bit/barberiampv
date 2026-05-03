@@ -12,7 +12,8 @@ const PrivacyPolicy = () => (
         <section>
           <h2 className="font-serif text-xl text-foreground mb-3">1. Responsable del tratamiento</h2>
           <p>
-            MVP Barber, con domicilio en Rada Tilly, Chubut, Argentina, es el responsable del tratamiento
+            MVP Barber, con domicilio en Av. Francisco Seguí 1157, Rada Tilly, Chubut, Argentina
+            (CUIT: <strong className="text-foreground">20-46981513-8</strong>), es el responsable del tratamiento
             de los datos personales recolectados a través de este sitio web (<strong className="text-foreground">barberiampv.com</strong>).
           </p>
           <p className="mt-2">Contacto: <a href="mailto:contacto@barberiampv.com" className="text-primary hover:underline">contacto@barberiampv.com</a></p>

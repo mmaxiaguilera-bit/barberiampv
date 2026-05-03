@@ -50,9 +50,14 @@ const Index = () => {
             En <strong className="text-foreground">MVP Barber</strong> combinamos técnica, estilo y atención personalizada.
             Reservá tu turno online en segundos.
           </p>
-          <Button variant="gold" size="xl" onClick={() => setOpen(true)} className="uppercase tracking-wider">
-            <Scissors className="h-5 w-5" /> Reservar turno
-          </Button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button variant="gold" size="xl" onClick={() => setOpen(true)} className="uppercase tracking-wider">
+              <Scissors className="h-5 w-5" /> Reservar turno
+            </Button>
+            <Button variant="outline" size="xl" asChild className="uppercase tracking-wider">
+              <a href="#servicios">Ver servicios</a>
+            </Button>
+          </div>
           <div className="flex items-center justify-center gap-1 mt-6 text-sm text-muted-foreground">
             <Star className="h-4 w-4 fill-primary text-primary" />
             <Star className="h-4 w-4 fill-primary text-primary" />
@@ -121,13 +126,16 @@ const Index = () => {
             <div className="space-y-4 text-muted-foreground">
               <div className="flex items-start gap-3">
                 <MapPin className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <span>Rada Tilly, Chubut, Argentina</span>
+                <div>
+                  <div className="text-foreground">Av. Francisco Seguí 1157</div>
+                  <div className="text-sm">Rada Tilly, Chubut, Argentina</div>
+                </div>
               </div>
               <div className="flex items-start gap-3">
                 <Clock className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-foreground">Lunes a Sábado</div>
-                  <div className="text-sm">10:00 — 21:00</div>
+                  <div className="text-foreground">Martes a Sábado</div>
+                  <div className="text-sm">10:00 — 20:00</div>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -142,7 +150,7 @@ const Index = () => {
           <div className="aspect-square rounded-2xl overflow-hidden border border-border luxury-card p-0">
             <iframe
               title="Ubicación MVP Barber"
-              src="https://www.google.com/maps?q=Rada+Tilly,+Chubut&output=embed"
+              src="https://www.google.com/maps?q=Av.+Francisco+Seguí+1157,+Rada+Tilly,+Chubut,+Argentina&output=embed"
               className="w-full h-full grayscale contrast-125 opacity-80"
               loading="lazy"
             />
@@ -154,9 +162,9 @@ const Index = () => {
         <div className="container px-4 space-y-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-center sm:text-left">
-              <span>© {new Date().getFullYear()} MVP Barber · Premium Barber Studio</span>
+              <span>© {new Date().getFullYear()} MVP Barber · CUIT 20-46981513-8</span>
               <span className="hidden sm:inline text-border">|</span>
-              <span>Rada Tilly, Chubut, Argentina</span>
+              <span>Av. Francisco Seguí 1157, Rada Tilly, Chubut</span>
               <span className="hidden sm:inline text-border">|</span>
               <a href="mailto:contacto@barberiampv.com" className="hover:text-primary transition-colors">contacto@barberiampv.com</a>
             </div>

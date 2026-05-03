@@ -330,6 +330,12 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
                         {lookingUp && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
                       </div>
                     </div>
+                    {isReturningClient && (
+                      <div className="flex items-center gap-2 text-sm text-green-400 bg-green-400/10 border border-green-400/20 rounded-md px-3 py-2">
+                        <Check className="h-4 w-4 flex-shrink-0" />
+                        <span>¡Te reconocemos! Tus datos fueron cargados automáticamente.</span>
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label htmlFor="firstName" className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-1.5">

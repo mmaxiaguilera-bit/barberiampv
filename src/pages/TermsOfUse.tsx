@@ -93,9 +93,11 @@ const TermsOfUse = () => (
         <section>
           <h2 className="font-serif text-xl text-foreground mb-3">10. Contacto</h2>
           <p>
+            MVP Barber · CUIT: <strong className="text-foreground">20-46981513-8</strong> · Av. Francisco Seguí 1157, Rada Tilly, Chubut.
+          </p>
+          <p className="mt-2">
             Para consultas sobre estos términos, escribinos a{" "}
-            <a href="mailto:contacto@barberiampv.com" className="text-primary hover:underline">contacto@barberiampv.com</a>
-            {" "}o visitanos en Rada Tilly, Chubut.
+            <a href="mailto:contacto@barberiampv.com" className="text-primary hover:underline">contacto@barberiampv.com</a>.
           </p>
         </section>
       </div>

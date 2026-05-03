@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -5,21 +6,22 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index.tsx";
-import Auth from "./pages/Auth.tsx";
-import BarberPanel from "./pages/BarberPanel.tsx";
-import AdminOverview from "./pages/AdminOverview.tsx";
-import AdminAppointments from "./pages/AdminAppointments.tsx";
-import AdminBarbers from "./pages/AdminBarbers.tsx";
-import AdminUsers from "./pages/AdminUsers.tsx";
-import AdminServices from "./pages/AdminServices.tsx";
-import AdminSchedules from "./pages/AdminSchedules.tsx";
-import AdminCash from "./pages/AdminCash.tsx";
-import AdminReports from "./pages/AdminReports.tsx";
-import AdminClients from "./pages/AdminClients.tsx";
 import MyAppointment from "./pages/MyAppointment.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
 import TermsOfUse from "./pages/TermsOfUse.tsx";
 import NotFound from "./pages/NotFound.tsx";
+
+const Auth = lazy(() => import("./pages/Auth.tsx"));
+const BarberPanel = lazy(() => import("./pages/BarberPanel.tsx"));
+const AdminOverview = lazy(() => import("./pages/AdminOverview.tsx"));
+const AdminAppointments = lazy(() => import("./pages/AdminAppointments.tsx"));
+const AdminBarbers = lazy(() => import("./pages/AdminBarbers.tsx"));
+const AdminUsers = lazy(() => import("./pages/AdminUsers.tsx"));
+const AdminServices = lazy(() => import("./pages/AdminServices.tsx"));
+const AdminSchedules = lazy(() => import("./pages/AdminSchedules.tsx"));
+const AdminCash = lazy(() => import("./pages/AdminCash.tsx"));
+const AdminReports = lazy(() => import("./pages/AdminReports.tsx"));
+const AdminClients = lazy(() => import("./pages/AdminClients.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -30,6 +32,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
@@ -48,6 +51,7 @@ const App = () => (
             <Route path="/terminos" element={<TermsOfUse />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
