@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { AppointmentSheet } from "@/components/AppointmentSheet";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Database } from "@/integrations/supabase/types";
-import { Barber, DAYS_SHORT, Schedule, Service, formatPrice, formatTime, getAvailableSlots, toISODate } from "@/lib/booking";
+import { Barber, DAYS_SHORT, DaySlot, Schedule, Service, formatPrice, formatTime, getAvailableSlots, getDayAgenda, toISODate } from "@/lib/booking";
 import { CalendarIcon, ChevronLeft, ChevronRight, Loader2, Plus, Filter } from "lucide-react";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -35,11 +35,27 @@ const AdminAppointments = () => {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Appt | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [agendaSchedules, setAgendaSchedules] = useState<Schedule[]>([]);
+  const [adminAgenda, setAdminAgenda] = useState<DaySlot[]>([]);
 
   useEffect(() => {
     supabase.from("barbers").select("*").order("display_order")
       .then(({ data }) => setBarbers(data ?? []));
   }, []);
+
+  useEffect(() => {
+    if (barberFilter === "all") { setAgendaSchedules([]); setAdminAgenda([]); return; }
+    supabase.from("schedules").select("*").eq("barber_id", barberFilter).eq("active", true)
+      .then(({ data }) => setAgendaSchedules((data ?? []) as Schedule[]));
+  }, [barberFilter]);
+
+  useEffect(() => {
+    if (barberFilter === "all" || agendaSchedules.length === 0 || view !== "day") { setAdminAgenda([]); return; }
+    const dayAppts = appointments
+      .filter(a => a.appointment_date === toISODate(date))
+      .map(a => ({ id: a.id, appointment_time: a.appointment_time, status: a.status }));
+    getDayAgenda(barberFilter, date, agendaSchedules, dayAppts).then(r => setAdminAgenda(r.slots));
+  }, [barberFilter, date, appointments, agendaSchedules, view]);
 
   const range = useMemo(() => {
     if (view === "day") return [date, date];
@@ -127,6 +143,12 @@ const AdminAppointments = () => {
         <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
       ) : view === "week" ? (
         <AdminWeekGrid weekStart={range[0]} appointments={appointments} barberFilter={barberFilter} barbers={barbers} onSelect={setSelected} />
+      ) : barberFilter !== "all" && adminAgenda.length > 0 ? (
+        <AdminDayAgenda
+          slots={adminAgenda}
+          appointments={appointments.filter(a => a.appointment_date === toISODate(date))}
+          onSelect={setSelected}
+        />
       ) : appointments.filter(a => a.appointment_date === toISODate(date)).length === 0 ? (
         <div className="luxury-card p-10 text-center text-muted-foreground">No hay turnos para este día.</div>
       ) : (
@@ -313,6 +335,72 @@ const CreateAppointmentDialog = ({ onClose, initialDate }: { onClose: () => void
         </Button>
       </div>
     </DialogContent>
+  );
+};
+
+const AdminDayAgenda = ({
+  slots, appointments, onSelect,
+}: {
+  slots: DaySlot[];
+  appointments: Appt[];
+  onSelect: (a: Appt) => void;
+}) => {
+  const apptById = new Map(appointments.map(a => [a.id, a]));
+  const countTurnos = slots.filter(s => s.status === "taken").length;
+
+  return (
+    <>
+      <div className="luxury-card overflow-hidden divide-y divide-border">
+        {slots.map((slot) => {
+          const appt = slot.appointmentId ? apptById.get(slot.appointmentId) : null;
+          const isClickable = slot.status === "taken" && !!appt;
+
+          return (
+            <div
+              key={slot.time}
+              onClick={() => isClickable && onSelect(appt!)}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 transition-colors",
+                slot.status === "closed" && "bg-muted/30 text-muted-foreground",
+                slot.status === "blocked" && "bg-destructive/5 text-muted-foreground",
+                slot.status === "available" && "hover:bg-secondary/40",
+                slot.status === "taken" && "bg-primary/5 hover:bg-primary/10 cursor-pointer",
+              )}
+            >
+              <div className={cn(
+                "font-mono text-sm w-14 flex-shrink-0 tabular-nums",
+                slot.status === "taken" ? "text-primary font-semibold" : "text-foreground/70",
+              )}>
+                {slot.time}
+              </div>
+              <div className="flex-1 min-w-0 text-sm">
+                {slot.status === "closed" && <span className="italic">Cerrado</span>}
+                {slot.status === "blocked" && (
+                  <span className="italic">Bloqueado <span className="text-xs">(no se pueden reservar turnos)</span></span>
+                )}
+                {slot.status === "available" && <span className="text-muted-foreground">Disponible</span>}
+                {slot.status === "taken" && appt && (
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-medium truncate">{appt.client_name}</span>
+                    <span className="text-muted-foreground truncate hidden sm:inline">· {appt.service_name}</span>
+                    <span className="ml-auto text-primary font-semibold">{formatPrice(Number(appt.service_price))}</span>
+                  </div>
+                )}
+              </div>
+              {slot.status === "taken" && appt && (
+                <StatusBadge status={appt.status} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="luxury-card mt-4 p-4">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Turnos reservados</span>
+          <span className="font-semibold">{countTurnos}</span>
+        </div>
+      </div>
+    </>
   );
 };
 

@@ -64,7 +64,7 @@ const Index = () => {
             <Star className="h-4 w-4 fill-primary text-primary" />
             <Star className="h-4 w-4 fill-primary text-primary" />
             <Star className="h-4 w-4 fill-primary text-primary" />
-            <span className="ml-2">+200 clientes satisfechos</span>
+            <span className="ml-2">+500 clientes satisfechos</span>
           </div>
         </div>
       </section>
@@ -168,7 +168,6 @@ const Index = () => {
               <span className="hidden sm:inline text-border">|</span>
               <a href="mailto:contacto@barberiampv.com" className="hover:text-primary transition-colors">contacto@barberiampv.com</a>
             </div>
-            <a href="/auth" className="text-muted-foreground/60 hover:text-primary transition-colors">Staff</a>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-4 pt-2 border-t border-border/40">
             <Link to="/privacidad" className="hover:text-primary transition-colors">Política de Privacidad</Link>

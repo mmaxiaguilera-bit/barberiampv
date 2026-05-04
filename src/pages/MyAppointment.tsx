@@ -125,7 +125,11 @@ const MyAppointment = () => {
                 const dateStr = new Date(a.appointment_date + "T12:00:00").toLocaleDateString("es-AR", {
                   weekday: "long", day: "numeric", month: "long",
                 });
-                const canCancel = a.status === "pendiente" || a.status === "confirmado";
+                const isActivatable = a.status === "pendiente" || a.status === "confirmado";
+                const appointmentDateTime = new Date(`${a.appointment_date}T${a.appointment_time}`);
+                const hoursUntil = (appointmentDateTime.getTime() - Date.now()) / 3_600_000;
+                const canCancel = isActivatable && hoursUntil > 3;
+                const tooLate = isActivatable && hoursUntil <= 3;
                 return (
                   <div key={a.id} className="luxury-card p-4">
                     <div className="flex items-start justify-between mb-3">
@@ -153,6 +157,11 @@ const MyAppointment = () => {
                       </span>
                     </div>
 
+                    {tooLate && (
+                      <p className="text-xs text-muted-foreground mt-3 text-center">
+                        Para cancelar comunicate con la barbería (menos de 3 hs antes del turno)
+                      </p>
+                    )}
                     {canCancel && (
                       <div className="mt-3">
                         <AlertDialog>
