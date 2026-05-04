@@ -1,4 +1,3 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SmtpClient } from "https://deno.land/x/denomailer@1.3.0/mod.ts";
 
 const corsHeaders = {
@@ -10,32 +9,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { appointment_id } = await req.json();
-    if (!appointment_id) {
-      return new Response(JSON.stringify({ error: "appointment_id requerido" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const { client_name, client_email, service_name, barber_name, appointment_date, appointment_time } = await req.json();
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    const { data: appt } = await supabaseAdmin
-      .from("appointments")
-      .select("*, clients(email, first_name), barbers(name)")
-      .eq("id", appointment_id)
-      .single();
-
-    if (!appt) {
-      return new Response(JSON.stringify({ ok: true, skipped: "not_found" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const clientEmail = (appt as any).clients?.email;
-    if (!clientEmail) {
+    if (!client_email) {
       return new Response(JSON.stringify({ ok: true, skipped: "no_email" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -52,12 +28,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const clientName = (appt as any).clients?.first_name ?? appt.client_name ?? "Cliente";
-    const barberName = (appt as any).barbers?.name ?? "—";
-    const dateStr = new Date(appt.appointment_date + "T12:00:00").toLocaleDateString("es-AR", {
+    const dateStr = new Date(appointment_date + "T12:00:00").toLocaleDateString("es-AR", {
       weekday: "long", day: "numeric", month: "long",
     });
-    const timeStr = (appt.appointment_time as string)?.slice(0, 5) ?? "";
+    const timeStr = (appointment_time as string)?.slice(0, 5) ?? "";
 
     const html = `
 <!DOCTYPE html>
@@ -69,14 +43,14 @@ Deno.serve(async (req) => {
     <div style="color:#666;font-size:11px;letter-spacing:4px;margin-top:4px">PREMIUM BARBER STUDIO</div>
   </div>
   <div style="padding:32px">
-    <h2 style="color:#e5e0d8;font-weight:400;margin:0 0 16px">Hola, ${clientName}</h2>
+    <h2 style="color:#e5e0d8;font-weight:400;margin:0 0 16px">Hola, ${client_name}</h2>
     <p style="color:#999;line-height:1.6;margin:0 0 24px">
       Tu turno fue reservado con éxito. ¡Te esperamos!
     </p>
     <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:20px;margin:0 0 24px">
       <table style="width:100%;font-size:14px;border-collapse:collapse">
-        <tr><td style="color:#666;padding:5px 0">Servicio</td><td style="color:#e5e0d8;text-align:right">${appt.service_name}</td></tr>
-        <tr><td style="color:#666;padding:5px 0">Barbero</td><td style="color:#e5e0d8;text-align:right">${barberName}</td></tr>
+        <tr><td style="color:#666;padding:5px 0">Servicio</td><td style="color:#e5e0d8;text-align:right">${service_name}</td></tr>
+        <tr><td style="color:#666;padding:5px 0">Barbero</td><td style="color:#e5e0d8;text-align:right">${barber_name}</td></tr>
         <tr><td style="color:#666;padding:5px 0">Fecha</td><td style="color:#e5e0d8;text-align:right;text-transform:capitalize">${dateStr}</td></tr>
         <tr><td style="color:#666;padding:5px 0">Hora</td><td style="color:#e5e0d8;text-align:right">${timeStr}</td></tr>
       </table>
@@ -101,7 +75,7 @@ Deno.serve(async (req) => {
     await smtp.connectTLS({ hostname: smtpHost, port: 465, username: smtpUser, password: smtpPass });
     await smtp.send({
       from: `Barbería MVP <${smtpUser}>`,
-      to: clientEmail,
+      to: client_email,
       subject: "¡Tu turno está confirmado! — Barbería MVP",
       html,
     });

@@ -149,7 +149,7 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
     }
 
     const fullName = `${parsed.data.first_name} ${parsed.data.last_name}`;
-    const { data: created, error } = await supabase.from("appointments").insert({
+    const { error } = await supabase.from("appointments").insert({
       client_name: fullName,
       client_phone: parsed.data.client_phone,
       client_id: resolvedClientId,
@@ -160,7 +160,7 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
       appointment_date: toISODate(date),
       appointment_time: time,
       status: "pendiente",
-    }).select("id").single();
+    });
     setSubmitting(false);
     if (error) {
       if (error.code === "23505") {
@@ -173,9 +173,16 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
       }
       return;
     }
-    if (created && email.trim()) {
+    if (email.trim()) {
       supabase.functions.invoke("send-confirmation-email", {
-        body: { appointment_id: created.id },
+        body: {
+          client_name: parsed.data.first_name,
+          client_email: email.trim(),
+          service_name: service.name,
+          barber_name: barber.name,
+          appointment_date: toISODate(date),
+          appointment_time: time,
+        },
       }).catch(() => {});
     }
     setDone(true);
