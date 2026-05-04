@@ -83,7 +83,7 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
       const c = data[0];
       setFirstName(c.first_name);
       setLastName(c.last_name);
-      setBirthDate(c.birth_date ?? "");
+      setBirthDate(c.birth_date ? c.birth_date.split('-').reverse().join('/') : "");
       setEmail((c as any).email ?? "");
       setIsReturningClient(true);
       setExistingClientId(c.id);
@@ -104,7 +104,8 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
   };
 
   const submit = async () => {
-    const parsed = formSchema.safeParse({ first_name: firstName, last_name: lastName, client_phone: phone, birth_date: birthDate });
+    const isoDate = birthDate.length === 10 ? birthDate.split('/').reverse().join('-') : undefined;
+    const parsed = formSchema.safeParse({ first_name: firstName, last_name: lastName, client_phone: phone, birth_date: isoDate });
     if (!parsed.success) {
       toast.error(parsed.error.issues[0].message);
       return;
@@ -374,7 +375,21 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
                         <Label htmlFor="birthDate" className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-1.5">
                           <CalendarIcon className="h-3 w-3" /> Fecha de nacimiento
                         </Label>
-                        <Input id="birthDate" type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} />
+                        <Input
+                          id="birthDate"
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="DD/MM/AAAA"
+                          value={birthDate}
+                          maxLength={10}
+                          onChange={e => {
+                            const raw = e.target.value.replace(/[^0-9]/g, '');
+                            let formatted = raw;
+                            if (raw.length > 4) formatted = raw.slice(0, 2) + '/' + raw.slice(2, 4) + '/' + raw.slice(4, 8);
+                            else if (raw.length > 2) formatted = raw.slice(0, 2) + '/' + raw.slice(2);
+                            setBirthDate(formatted);
+                          }}
+                        />
                       </div>
                     )}
                   </div>
