@@ -119,18 +119,19 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
       // Cliente ya reconocido por teléfono, usar su ID directamente
       resolvedClientId = existingClientId;
     } else {
-      // Cliente nuevo: INSERT puro (upsert falla por RLS con anon en UPDATE)
-      const { data: inserted, error: insertError } = await supabase
+      // Cliente nuevo: generamos el ID en el frontend para evitar SELECT post-insert
+      // (anon no tiene política SELECT en clients, entonces .insert().select() falla con RLS)
+      const newClientId = crypto.randomUUID();
+      const { error: insertError } = await supabase
         .from("clients")
         .insert({
+          id: newClientId,
           first_name: parsed.data.first_name,
           last_name: parsed.data.last_name,
           phone: parsed.data.client_phone,
           ...(parsed.data.birth_date ? { birth_date: parsed.data.birth_date } : {}),
           ...(email.trim() ? { email: email.trim() } : {}),
-        })
-        .select("id")
-        .single();
+        });
 
       if (insertError) {
         if (insertError.code === "23505") {
@@ -144,7 +145,7 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
           return;
         }
       } else {
-        resolvedClientId = inserted.id;
+        resolvedClientId = newClientId;
       }
     }
 
