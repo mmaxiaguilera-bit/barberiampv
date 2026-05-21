@@ -174,13 +174,13 @@ const Index = () => {
             <span className="text-border">·</span>
             <Link to="/terminos" className="hover:text-primary transition-colors">Términos y Condiciones</Link>
           </div>
-          <div className="text-center pt-2 border-t border-border/40 text-muted-foreground/50">
+          <div className="text-center pt-4 border-t border-border/40 text-sm text-muted-foreground">
             Hecho por{" "}
             <a
               href="https://wa.me/5492974364264"
               target="_blank"
               rel="noreferrer"
-              className="text-primary hover:opacity-80 transition-opacity font-medium"
+              className="text-primary hover:opacity-80 transition-opacity font-semibold text-base"
             >
               Maxi Aguilera
             </a>
