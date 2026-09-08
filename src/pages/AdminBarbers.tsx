@@ -7,8 +7,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Barber } from "@/lib/booking";
-import { Pencil, Plus, Loader2, User, Mail } from "lucide-react";
+import { Pencil, Plus, Loader2, User, Mail, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const AdminBarbers = () => {
@@ -17,6 +28,7 @@ const AdminBarbers = () => {
   const [editing, setEditing] = useState<Barber | null>(null);
   const [open, setOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -28,6 +40,15 @@ const AdminBarbers = () => {
 
   const startNew = () => { setEditing(null); setOpen(true); };
   const startEdit = (b: Barber) => { setEditing(b); setOpen(true); };
+
+  const remove = async (id: string) => {
+    setDeleting(id);
+    const { error } = await supabase.from("barbers").delete().eq("id", id);
+    setDeleting(null);
+    if (error) return toast.error(error.message);
+    toast.success("Barbero eliminado");
+    load();
+  };
 
   return (
     <PanelLayout requireRole="admin">
@@ -61,7 +82,30 @@ const AdminBarbers = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium">{b.name}</h3>
-                    <Button variant="ghost" size="icon" onClick={() => startEdit(b)}><Pencil className="h-3.5 w-3.5" /></Button>
+                    <div className="flex items-center">
+                      <Button variant="ghost" size="icon" onClick={() => startEdit(b)}><Pencil className="h-3.5 w-3.5" /></Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" disabled={deleting === b.id}>
+                            {deleting === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="font-serif">¿Eliminar a {b.name}?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta acción no se puede deshacer. Se van a borrar también todos sus turnos y horarios asociados.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => remove(b.id)}>
+                              Eliminar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2">{b.bio}</p>
                   {!b.active && <span className="inline-block mt-2 text-[10px] uppercase tracking-wider text-destructive">Inactivo</span>}
