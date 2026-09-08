@@ -39,15 +39,16 @@ export const generateSlots = (schedule: Schedule): string[] => {
 export const getAvailableSlots = async (
   barberId: string,
   date: Date,
-  schedules: Schedule[]
+  schedules: Schedule[],
+  serviceDurationMinutes?: number,
 ): Promise<string[]> => {
   const dow = date.getDay();
   const daySchedules = schedules
     .filter(s => s.barber_id === barberId && s.day_of_week === dow && s.active)
     .sort((a, b) => a.start_time.localeCompare(b.start_time));
   if (daySchedules.length === 0) return [];
-  const allSlots = daySchedules.flatMap(generateSlots);
   const slotMinutes = daySchedules[0].slot_minutes;
+  const duration = serviceDurationMinutes ?? slotMinutes;
 
   const isoDate = toISODate(date);
   const [{ data: taken }, { data: blocks }] = await Promise.all([
@@ -66,22 +67,43 @@ export const getAvailableSlots = async (
     .filter(b => !b.full_day && b.start_time && b.end_time)
     .map(b => [timeToMinutes(b.start_time as string), timeToMinutes(b.end_time as string)] as const);
 
+  // Candidates are the barber's normal grid points (e.g. every 40 min) plus
+  // the exact moment they free up after each existing appointment/block —
+  // so a longer service (e.g. 60 min) can start right when there's room,
+  // instead of waiting for the next fixed grid point.
+  const candidateStarts = new Set<number>();
+  for (const sch of daySchedules) {
+    const start = timeToMinutes(sch.start_time);
+    const end = timeToMinutes(sch.end_time);
+    for (let m = start; m + duration <= end; m += sch.slot_minutes) {
+      candidateStarts.add(m);
+    }
+  }
+  for (const [, te] of takenRanges) candidateStarts.add(te);
+  for (const [, be] of blockedMinuteRanges) candidateStarts.add(be);
+
+  const fitsWithinOpenSchedule = (start: number, end: number) =>
+    daySchedules.some(sch => start >= timeToMinutes(sch.start_time) && end <= timeToMinutes(sch.end_time));
+
   const now = new Date();
   const isToday = isoDate === toISODate(now);
   const nowMins = now.getHours() * 60 + now.getMinutes();
 
-  return allSlots.filter(s => {
-    const slotStart = timeToMinutes(s);
-    const slotEnd = slotStart + slotMinutes;
-    for (const [ts, te] of takenRanges) {
-      if (slotStart < te && slotEnd > ts) return false;
-    }
-    for (const [bs, be] of blockedMinuteRanges) {
-      if (slotStart < be && slotEnd > bs) return false;
-    }
-    if (isToday && slotStart <= nowMins) return false;
-    return true;
-  });
+  return [...candidateStarts]
+    .filter(slotStart => {
+      const slotEnd = slotStart + duration;
+      if (!fitsWithinOpenSchedule(slotStart, slotEnd)) return false;
+      for (const [ts, te] of takenRanges) {
+        if (slotStart < te && slotEnd > ts) return false;
+      }
+      for (const [bs, be] of blockedMinuteRanges) {
+        if (slotStart < be && slotEnd > bs) return false;
+      }
+      if (isToday && slotStart <= nowMins) return false;
+      return true;
+    })
+    .sort((a, b) => a - b)
+    .map(minutesToTime);
 };
 
 /**

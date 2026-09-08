@@ -266,8 +266,9 @@ const CreateAppointmentDialog = ({ onClose, initialDate }: { onClose: () => void
 
   useEffect(() => {
     if (!barberId || !date) { setSlots([]); return; }
-    getAvailableSlots(barberId, date, schedules).then(setSlots);
-  }, [barberId, date, schedules]);
+    const duration = services.find(s => s.id === serviceId)?.duration_minutes;
+    getAvailableSlots(barberId, date, schedules, duration).then(setSlots);
+  }, [barberId, date, schedules, serviceId, services]);
 
   const submit = async () => {
     if (!serviceId || !barberId || !time || !name.trim() || !phone.trim()) return toast.error("Completá todos los campos");

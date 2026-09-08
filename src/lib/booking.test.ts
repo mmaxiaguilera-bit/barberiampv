@@ -89,6 +89,44 @@ describe("getAvailableSlots ordering", () => {
   });
 });
 
+describe("getAvailableSlots with a service duration longer than the schedule's grid interval", () => {
+  const grid40: Schedule = { ...schedule, start_time: "10:00:00", end_time: "14:00:00", slot_minutes: 40 };
+
+  it("offers the exact moment the barber frees up, not just the next 40-minute grid point", async () => {
+    vi.mocked(supabase.rpc).mockImplementation((fn: string) => {
+      if (fn === "get_taken_slots") {
+        return Promise.resolve({
+          data: [{ appointment_time: "10:00:00", duration_minutes: 60 }],
+          error: null,
+        }) as any;
+      }
+      if (fn === "get_blocked_ranges") return Promise.resolve({ data: [], error: null }) as any;
+      throw new Error(`unexpected rpc: ${fn}`);
+    });
+
+    // Someone booking another 60-minute "Corte + barba" should be able to
+    // start right at 11:00, when the barber actually becomes free, instead
+    // of waiting for 11:20 (the next point on the 40-minute grid).
+    const slots = await getAvailableSlots(BARBER_ID, DATE, [grid40], 60);
+
+    expect(slots).not.toContain("10:00:00");
+    expect(slots).not.toContain("10:40:00");
+    expect(slots).toContain("11:00:00");
+  });
+
+  it("keeps the plain 40-minute grid for a normal-duration service when nothing is booked", async () => {
+    vi.mocked(supabase.rpc).mockImplementation((fn: string) => {
+      if (fn === "get_taken_slots") return Promise.resolve({ data: [], error: null }) as any;
+      if (fn === "get_blocked_ranges") return Promise.resolve({ data: [], error: null }) as any;
+      throw new Error(`unexpected rpc: ${fn}`);
+    });
+
+    const slots = await getAvailableSlots(BARBER_ID, DATE, [grid40], 40);
+
+    expect(slots).toEqual(["10:00:00", "10:40:00", "11:20:00", "12:00:00", "12:40:00", "13:20:00"]);
+  });
+});
+
 describe("getDayAgenda", () => {
   it("marks every slot inside a 60-minute appointment as taken, not just its start time", async () => {
     vi.mocked(supabase.rpc).mockImplementation((fn: string) => {

@@ -69,10 +69,10 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
   useEffect(() => {
     if (!barber || !date) { setSlots([]); return; }
     setLoadingSlots(true);
-    getAvailableSlots(barber.id, date, schedules)
+    getAvailableSlots(barber.id, date, schedules, service?.duration_minutes)
       .then(setSlots)
       .finally(() => setLoadingSlots(false));
-  }, [barber, date, schedules]);
+  }, [barber, date, schedules, service]);
 
   const lookupPhone = async (p: string) => {
     if (p.length < 6) { setIsReturningClient(false); setExistingClientId(null); return; }
@@ -168,7 +168,7 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
     if (error) {
       if (error.code === "23505") {
         toast.error("Ese horario acaba de ser reservado. Elegí otro.");
-        const fresh = await getAvailableSlots(barber.id, date, schedules);
+        const fresh = await getAvailableSlots(barber.id, date, schedules, service.duration_minutes);
         setSlots(fresh);
         setTime(null);
       } else {
