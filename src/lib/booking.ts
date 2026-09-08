@@ -42,7 +42,9 @@ export const getAvailableSlots = async (
   schedules: Schedule[]
 ): Promise<string[]> => {
   const dow = date.getDay();
-  const daySchedules = schedules.filter(s => s.barber_id === barberId && s.day_of_week === dow && s.active);
+  const daySchedules = schedules
+    .filter(s => s.barber_id === barberId && s.day_of_week === dow && s.active)
+    .sort((a, b) => a.start_time.localeCompare(b.start_time));
   if (daySchedules.length === 0) return [];
   const allSlots = daySchedules.flatMap(generateSlots);
   const slotMinutes = daySchedules[0].slot_minutes;

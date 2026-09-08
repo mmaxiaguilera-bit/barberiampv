@@ -69,6 +69,26 @@ describe("getAvailableSlots", () => {
   });
 });
 
+describe("getAvailableSlots ordering", () => {
+  it("returns slots sorted chronologically even when the barber has split shifts stored out of order", async () => {
+    vi.mocked(supabase.rpc).mockImplementation((fn: string) => {
+      if (fn === "get_taken_slots") return Promise.resolve({ data: [], error: null }) as any;
+      if (fn === "get_blocked_ranges") return Promise.resolve({ data: [], error: null }) as any;
+      throw new Error(`unexpected rpc: ${fn}`);
+    });
+
+    // Split shifts returned from the DB out of chronological order,
+    // as they would be if not explicitly sorted (e.g. by insertion order).
+    const afternoon: Schedule = { ...schedule, id: "sched-pm", start_time: "17:00:00", end_time: "20:00:00" };
+    const morning: Schedule = { ...schedule, id: "sched-am", start_time: "10:00:00", end_time: "12:00:00" };
+
+    const slots = await getAvailableSlots(BARBER_ID, DATE, [afternoon, morning]);
+
+    const sorted = [...slots].sort();
+    expect(slots).toEqual(sorted);
+  });
+});
+
 describe("getDayAgenda", () => {
   it("marks every slot inside a 60-minute appointment as taken, not just its start time", async () => {
     vi.mocked(supabase.rpc).mockImplementation((fn: string) => {
