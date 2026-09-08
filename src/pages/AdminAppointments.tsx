@@ -53,7 +53,7 @@ const AdminAppointments = () => {
     if (barberFilter === "all" || agendaSchedules.length === 0 || view !== "day") { setAdminAgenda([]); return; }
     const dayAppts = appointments
       .filter(a => a.appointment_date === toISODate(date))
-      .map(a => ({ id: a.id, appointment_time: a.appointment_time, status: a.status }));
+      .map(a => ({ id: a.id, appointment_time: a.appointment_time, status: a.status, service_duration_minutes: a.service_duration_minutes }));
     getDayAgenda(barberFilter, date, agendaSchedules, dayAppts).then(r => setAdminAgenda(r.slots));
   }, [barberFilter, date, appointments, agendaSchedules, view]);
 
@@ -275,7 +275,7 @@ const CreateAppointmentDialog = ({ onClose, initialDate }: { onClose: () => void
     setBusy(true);
     const { error } = await supabase.from("appointments").insert({
       client_name: name.trim(), client_phone: phone.trim(),
-      service_id: svc.id, service_name: svc.name, service_price: svc.price,
+      service_id: svc.id, service_name: svc.name, service_price: svc.price, service_duration_minutes: svc.duration_minutes,
       barber_id: barberId, appointment_date: toISODate(date), appointment_time: time, status: "pendiente",
     });
     setBusy(false);

@@ -68,7 +68,7 @@ const BarberPanel = () => {
     if (view === "day" && schedules.length > 0) {
       const dayAppts = appts
         .filter(a => a.appointment_date === toISODate(date))
-        .map(a => ({ id: a.id, appointment_time: a.appointment_time, status: a.status }));
+        .map(a => ({ id: a.id, appointment_time: a.appointment_time, status: a.status, service_duration_minutes: a.service_duration_minutes }));
       const res = await getDayAgenda(barberId, date, schedules, dayAppts);
       setAgenda(res.slots);
     }

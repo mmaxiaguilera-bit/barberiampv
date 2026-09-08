@@ -53,6 +53,7 @@ export type Database = {
           created_at: string
           id: string
           notes: string | null
+          service_duration_minutes: number
           service_id: string | null
           service_name: string
           service_price: number
@@ -68,6 +69,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          service_duration_minutes?: number
           service_id?: string | null
           service_name: string
           service_price?: number
@@ -83,6 +85,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          service_duration_minutes?: number
           service_id?: string | null
           service_name?: string
           service_price?: number
@@ -442,6 +445,7 @@ export type Database = {
         Args: { _barber_id: string; _date: string }
         Returns: {
           appointment_time: string
+          duration_minutes: number
         }[]
       }
       has_role: {

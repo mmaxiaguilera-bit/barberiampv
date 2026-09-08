@@ -52,7 +52,10 @@ export const getAvailableSlots = async (
     supabase.rpc("get_taken_slots", { _barber_id: barberId, _date: isoDate }),
     supabase.rpc("get_blocked_ranges", { _barber_id: barberId, _date: isoDate }),
   ]);
-  const takenSet = new Set((taken ?? []).map((r: any) => r.appointment_time.slice(0, 5)));
+  const takenRanges = (taken ?? []).map((r: any) => {
+    const takenStart = timeToMinutes(r.appointment_time.slice(0, 5));
+    return [takenStart, takenStart + (r.duration_minutes ?? slotMinutes)] as const;
+  });
   const blockRanges = (blocks ?? []) as { start_time: string | null; end_time: string | null; full_day: boolean }[];
   const hasFullDayBlock = blockRanges.some(b => b.full_day);
   if (hasFullDayBlock) return [];
@@ -66,10 +69,11 @@ export const getAvailableSlots = async (
   const nowMins = now.getHours() * 60 + now.getMinutes();
 
   return allSlots.filter(s => {
-    const hhmm = s.slice(0, 5);
-    if (takenSet.has(hhmm)) return false;
     const slotStart = timeToMinutes(s);
     const slotEnd = slotStart + slotMinutes;
+    for (const [ts, te] of takenRanges) {
+      if (slotStart < te && slotEnd > ts) return false;
+    }
     for (const [bs, be] of blockedMinuteRanges) {
       if (slotStart < be && slotEnd > bs) return false;
     }
@@ -94,7 +98,7 @@ export const getDayAgenda = async (
   barberId: string,
   date: Date,
   schedules: Schedule[],
-  appointments: { id: string; appointment_time: string; status: string }[],
+  appointments: { id: string; appointment_time: string; status: string; service_duration_minutes: number }[],
 ): Promise<{ slots: DaySlot[]; openStart: string; openEnd: string; slotMinutes: number; closed: boolean }> => {
   const dow = date.getDay();
   const daySchedules = schedules
@@ -124,11 +128,12 @@ export const getDayAgenda = async (
     .filter(b => !b.full_day && b.start_time && b.end_time)
     .map(b => [timeToMinutes(b.start_time as string), timeToMinutes(b.end_time as string)] as const);
 
-  const apptMap = new Map<string, { id: string; status: string }>();
-  for (const a of appointments) {
-    if (a.status === "cancelado") continue;
-    apptMap.set(a.appointment_time.slice(0, 5), { id: a.id, status: a.status });
-  }
+  const apptIntervals = appointments
+    .filter(a => a.status !== "cancelado")
+    .map(a => {
+      const start = timeToMinutes(a.appointment_time.slice(0, 5));
+      return { id: a.id, start, end: start + (a.service_duration_minutes ?? slotMinutes) };
+    });
 
   // Build a continuous grid from openStart to openEnd
   const startM = timeToMinutes(daySchedules[0].start_time);
@@ -138,8 +143,8 @@ export const getDayAgenda = async (
   for (let m = startM; m + slotMinutes <= endM; m += slotMinutes) {
     const hhmm = minutesToTime(m).slice(0, 5);
     const isOpen = openSlotStarts.has(m);
-    const appt = apptMap.get(hhmm);
     const slotEnd = m + slotMinutes;
+    const appt = apptIntervals.find(iv => m < iv.end && slotEnd > iv.start);
     const isBlocked = fullDayBlocked || blockedMinuteRanges.some(([bs, be]) => m < be && slotEnd > bs);
 
     if (appt) slots.push({ time: hhmm, status: "taken", appointmentId: appt.id });
