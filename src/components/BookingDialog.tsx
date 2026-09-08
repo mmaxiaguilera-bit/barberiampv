@@ -158,6 +158,7 @@ export const BookingDialog = ({ open, onOpenChange }: BookingDialogProps) => {
       service_id: service.id,
       service_name: service.name,
       service_price: service.price,
+      service_duration_minutes: service.duration_minutes,
       barber_id: barber.id,
       appointment_date: toISODate(date),
       appointment_time: time,
