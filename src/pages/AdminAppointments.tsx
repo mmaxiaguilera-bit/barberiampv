@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PanelLayout } from "@/components/PanelLayout";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,12 @@ const AdminAppointments = () => {
   const [appointments, setAppointments] = useState<Appt[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Appt | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
+  // "Nuevo turno" del menú lateral llega con ?nuevo=1 y abre el formulario
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [createOpen, setCreateOpen] = useState(() => searchParams.get("nuevo") === "1");
+  useEffect(() => {
+    if (searchParams.get("nuevo") === "1") { setCreateOpen(true); setSearchParams({}, { replace: true }); }
+  }, [searchParams, setSearchParams]);
   const [agendaSchedules, setAgendaSchedules] = useState<Schedule[]>([]);
   const [adminAgenda, setAdminAgenda] = useState<DaySlot[]>([]);
 
@@ -218,7 +224,7 @@ const AdminWeekGrid = ({
         const isToday = iso === today;
         return (
           <div key={iso} className={cn("luxury-card p-3 min-h-[140px]", isToday && "border-primary/50")}>
-            <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+            <div className="text-xs uppercase tracking-[0.02em] text-muted-foreground mb-2">
               {DAYS_SHORT[(i + 1) % 7]} <span className={cn("ml-1", isToday && "text-primary font-semibold")}>{d.getDate()}</span>
             </div>
             {dayAppts.length === 0 ? (

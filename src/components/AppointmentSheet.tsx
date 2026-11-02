@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { STATUS_OPTIONS, StatusBadge, statusLabel } from "./StatusBadge";
 import { CollectPaymentDialog } from "./CollectPaymentDialog";
+import { ClientLoyaltyPanel } from "./loyalty/ClientLoyaltyPanel";
 import { Database } from "@/integrations/supabase/types";
 import { formatPrice, formatTime } from "@/lib/booking";
 import { toast } from "sonner";
@@ -98,16 +99,26 @@ export const AppointmentSheet = ({ appointment, open, onOpenChange, onChanged, c
             {appointment.barbers?.name && <Row icon={User} label="Barbero" value={appointment.barbers.name} />}
           </div>
 
+          {appointment.client_id && (
+            <div className="border-t border-border pt-5 space-y-2">
+              <label className="text-xs uppercase tracking-[0.02em] text-muted-foreground block">Fidelidad</label>
+              <ClientLoyaltyPanel clientId={appointment.client_id} name={appointment.client_name} appointmentId={appointment.id} compact />
+              {!alreadyAttended && (
+                <p className="text-[11px] text-muted-foreground">La visita se suma automáticamente al marcar el turno como atendido.</p>
+              )}
+            </div>
+          )}
+
           <div className="border-t border-border pt-5 space-y-4">
             <div>
-              <label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">Estado</label>
+              <label className="text-xs uppercase tracking-[0.02em] text-muted-foreground mb-2 block">Estado</label>
               <Select value={status} onValueChange={v => setStatus(v as any)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
-              <label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">Notas internas</label>
+              <label className="text-xs uppercase tracking-[0.02em] text-muted-foreground mb-2 block">Notas internas</label>
               <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={4} placeholder="Preferencias, observaciones, etc." maxLength={500} />
             </div>
           </div>
@@ -154,7 +165,7 @@ const Row = ({ icon: Icon, label, value }: { icon: any; label: string; value: Re
   <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/30 border border-border">
     <Icon className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
     <div className="min-w-0 flex-1">
-      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="text-[11px] uppercase tracking-[0.02em] text-muted-foreground">{label}</div>
       <div className="text-foreground break-words">{value}</div>
     </div>
   </div>

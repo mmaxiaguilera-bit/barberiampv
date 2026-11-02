@@ -10,9 +10,20 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:push:dev": "scripts/dev-db.sh push",
+    "db:seed:dev": "scripts/dev-db.sh seed",
+    "db:test:dev": "scripts/dev-db.sh test | python3 scripts/run-db-tests.py",
+    "db:types:dev": "scripts/dev-db.sh types",
+    "db:reset:dev": "scripts/dev-db.sh reset && node scripts/dev-portfolio-demo.mjs",
+    "test:concurrency:dev": "node scripts/concurrency-test.mjs",
+    "db:photos:dev": "node scripts/dev-portfolio-demo.mjs"
   },
   "dependencies": {
+    "@fontsource/gloock": "^5.3.0",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/onest": "^5.3.1",
+    "@fontsource/playfair-display": "^5.2.8",
     "@hookform/resolvers": "^3.10.0",
     "@lovable.dev/cloud-auth-js": "^1.1.1",
     "@radix-ui/react-accordion": "^1.2.11",

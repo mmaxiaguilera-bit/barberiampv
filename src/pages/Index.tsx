@@ -1,16 +1,34 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/SiteHeader";
 import { BookingDialog } from "@/components/BookingDialog";
+import { LoyaltyInvite } from "@/components/loyalty/LoyaltyInvite";
+import { LoyaltySection } from "@/components/loyalty/LoyaltySection";
+import { useAuth } from "@/hooks/useAuth";
 import { Service, Barber, formatPrice } from "@/lib/booking";
-import { Scissors, MapPin, Clock, Instagram, Phone, Star } from "lucide-react";
-import hero from "@/assets/hero-barbershop.jpg";
+import { Scissors, MapPin, Clock, Instagram, Phone, Star, Gift } from "lucide-react";
+import hero from "@/assets/interior.jpg";
 import logo from "@/assets/mvp-logo.png";
+
+const MAP_QUERY = "Av.+Francisco+Seguí+1157,+Rada+Tilly,+Chubut,+Argentina";
+const MAP_EMBED_URL = `https://www.google.com/maps?q=${MAP_QUERY}&output=embed`;
+const MAP_LINK_URL = `https://www.google.com/maps?q=${MAP_QUERY}`;
 
 const Index = () => {
   const [open, setOpen] = useState(false);
+  // "Reservar" del header desde otras páginas llega con ?reservar=1
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("reservar") === "1") { setOpen(true); setSearchParams({}, { replace: true }); }
+  }, [searchParams, setSearchParams]);
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  // Con sesión va a su tarjeta (o a completar el alta); sin sesión, la presentación con el formulario
+  const openLoyalty = () => (user ? navigate("/mi-tarjeta") : setPromoOpen(true));
   const [services, setServices] = useState<Service[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
 
@@ -25,37 +43,45 @@ const Index = () => {
     })();
   }, []);
 
+  // Al llegar desde otra página a /#servicios, /#equipo, etc.: bajar a esa sección
+  // cuando ya cargó el contenido (si no, la sección todavía no tiene su altura final)
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (!hash || !services.length) return;
+    document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: "smooth" });
+  }, [hash, services.length]);
+
   return (
     <div className="min-h-screen flex flex-col">
-      <SiteHeader />
+      <SiteHeader overlay onBook={() => setOpen(true)} />
 
       {/* HERO */}
       <section className="relative isolate overflow-hidden">
         <img
           src={hero}
-          alt="Interior premium de MVP Barber"
-          width={1920}
-          height={1280}
+          alt="Interior de MVP Barber"
+          width={1672}
+          height={940}
           className="absolute inset-0 w-full h-full object-cover opacity-50"
         />
         <div className="absolute inset-0 bg-[image:var(--gradient-hero)]" />
-        <div className="relative container px-4 py-20 sm:py-32 md:py-40 text-center max-w-3xl mx-auto">
+        <div className="relative container px-4 pt-32 pb-20 sm:pt-44 sm:pb-32 md:pt-52 md:pb-40 text-center max-w-3xl mx-auto">
           <img src={logo} alt="" width={96} height={96} className="mx-auto mb-6 w-20 sm:w-24 h-auto" />
           <p className="text-primary text-xs sm:text-sm tracking-luxury uppercase mb-4">Premium Barber Studio</p>
           <h1 className="font-serif text-5xl sm:text-6xl md:text-7xl text-foreground mb-6 leading-[1.05]">
             El arte del corte, <br />
-            <span className="text-gold-gradient italic">redefinido.</span>
+            <span className="text-gold-gradient">redefinido.</span>
           </h1>
           <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto mb-10">
             En <strong className="text-foreground">MVP Barber</strong> combinamos técnica, estilo y atención personalizada.
             Reservá tu turno online en segundos.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button variant="gold" size="xl" onClick={() => setOpen(true)} className="uppercase tracking-wider">
+            <Button variant="gold" size="xl" onClick={() => setOpen(true)} className="uppercase font-medium text-sm tracking-[0.02em]">
               <Scissors className="h-5 w-5" /> Reservar turno
             </Button>
-            <Button variant="outline" size="xl" asChild className="uppercase tracking-wider">
-              <a href="#servicios">Ver servicios</a>
+            <Button variant="goldOutline" size="xl" onClick={openLoyalty} className="uppercase font-medium text-sm tracking-[0.02em]">
+              <Gift className="h-5 w-5" /> Mi tarjeta de fidelidad
             </Button>
           </div>
           <div className="flex items-center justify-center gap-1 mt-6 text-sm text-muted-foreground">
@@ -95,23 +121,31 @@ const Index = () => {
         </div>
       </section>
 
+      {/* FIDELIDAD */}
+      <LoyaltySection hasSession={!!user} onJoin={openLoyalty} />
+
       {/* BARBEROS */}
-      <section className="py-20 sm:py-28 bg-card/40 border-y border-border">
+      <section id="equipo" className="py-20 sm:py-28 bg-card/40 border-y border-border">
         <div className="container px-4">
           <div className="text-center mb-14">
             <p className="text-primary text-xs tracking-luxury uppercase mb-3">El equipo</p>
             <h2 className="font-serif text-4xl sm:text-5xl mb-4">Nuestros barberos</h2>
             <div className="gold-divider" />
           </div>
-          <div className="grid sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="flex flex-wrap justify-center gap-8 sm:gap-10 max-w-4xl mx-auto">
             {barbers.map(b => (
-              <div key={b.id} className="text-center">
-                <div className="mx-auto w-32 h-32 rounded-full bg-gradient-to-br from-primary/30 via-primary/10 to-transparent border border-primary/30 flex items-center justify-center font-serif text-5xl text-primary mb-4">
-                  {b.name[0]}
+              <Link
+                key={b.id}
+                to={`/barberos/${b.slug ?? b.id}`}
+                className="group text-center w-full sm:w-64 rounded-xl p-4 transition-colors hover:bg-secondary/30"
+              >
+                <div className="mx-auto w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-primary/30 via-primary/10 to-transparent border border-primary/30 flex items-center justify-center font-serif text-5xl text-primary mb-4 transition-all duration-300 group-hover:border-primary group-hover:shadow-[var(--shadow-gold)]">
+                  {b.photo_url ? <img src={b.photo_url} alt={b.name} className="w-full h-full object-cover" /> : b.name[0]}
                 </div>
                 <h3 className="font-serif text-2xl mb-1">{b.name}</h3>
                 <p className="text-sm text-muted-foreground">{b.bio}</p>
-              </div>
+                <span className="inline-block mt-3 text-sm text-primary group-hover:underline">Ver sus cortes →</span>
+              </Link>
             ))}
           </div>
         </div>
@@ -148,12 +182,29 @@ const Index = () => {
             </Button>
           </div>
           <div className="aspect-square rounded-2xl overflow-hidden border border-border luxury-card p-0">
-            <iframe
-              title="Ubicación MVP Barber"
-              src="https://www.google.com/maps?q=Av.+Francisco+Seguí+1157,+Rada+Tilly,+Chubut,+Argentina&output=embed"
-              className="w-full h-full grayscale contrast-125 opacity-80"
-              loading="lazy"
-            />
+            {/* El mapa de Google se carga solo si la persona lo pide: antes no se contacta a Google */}
+            {showMap ? (
+              <iframe
+                title="Ubicación MVP Barber"
+                src={MAP_EMBED_URL}
+                className="w-full h-full grayscale contrast-125 opacity-80"
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-4 p-6 text-center">
+                <MapPin className="h-10 w-10 text-primary" />
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  El mapa lo provee Google, que puede guardar cookies propias en tu navegador.{" "}
+                  <Link to="/cookies" className="text-primary hover:underline">Más información</Link>.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button variant="gold" size="sm" onClick={() => setShowMap(true)}>Ver mapa aquí</Button>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={MAP_LINK_URL} target="_blank" rel="noreferrer">Abrir en Google Maps</a>
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -173,6 +224,8 @@ const Index = () => {
             <Link to="/privacidad" className="hover:text-primary transition-colors">Política de Privacidad</Link>
             <span className="text-border">·</span>
             <Link to="/terminos" className="hover:text-primary transition-colors">Términos y Condiciones</Link>
+            <span className="text-border">·</span>
+            <Link to="/cookies" className="hover:text-primary transition-colors">Cookies</Link>
           </div>
           <div className="text-center pt-4 border-t border-border/40 text-sm text-muted-foreground">
             Hecho por{" "}
@@ -189,6 +242,7 @@ const Index = () => {
       </footer>
 
       <BookingDialog open={open} onOpenChange={setOpen} />
+      <LoyaltyInvite open={promoOpen} onOpenChange={setPromoOpen} suppress={open} />
     </div>
   );
 };

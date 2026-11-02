@@ -68,7 +68,7 @@ const AdminServices = () => {
                   <Clock className="h-3 w-3" /> {s.duration_minutes} min
                 </span>
               </div>
-              {!s.active && <div className="mt-2 text-[10px] uppercase tracking-wider text-destructive">Inactivo</div>}
+              {!s.active && <div className="mt-2 text-[10px] uppercase tracking-[0.02em] text-destructive">Inactivo</div>}
             </div>
           ))}
         </div>

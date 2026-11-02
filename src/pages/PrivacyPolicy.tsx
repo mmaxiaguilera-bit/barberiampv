@@ -1,104 +1,154 @@
 import { Link } from "react-router-dom";
-import { SiteHeader } from "@/components/SiteHeader";
+import { LegalPage, MailLink, Section, Strong } from "@/components/LegalPage";
+import { BUSINESS, PRIVACY_VERSION } from "@/lib/legal";
+
+// Texto versionado: si cambia el contenido, crear una versión nueva (ver docs/LEGAL.md)
+const PURPOSES: { what: string; data: string; basis: string; required: string }[] = [
+  {
+    what: "Reservar, confirmar y cancelar turnos",
+    data: "Nombre, apellido, teléfono; servicio, barbero, fecha, hora y estado del turno",
+    basis: "Necesarios para el servicio que pedís (art. 5, inc. 2, ap. d, Ley 25.326)",
+    required: "Obligatorios: sin ellos no podemos tomar la reserva",
+  },
+  {
+    what: "Enviarte la confirmación o la cancelación del turno por email",
+    data: "Email",
+    basis: "Lo dejás voluntariamente para recibir esos avisos",
+    required: "Opcional: si no lo dejás, reservás igual",
+  },
+  {
+    what: "Cobrar en el local y llevar la caja",
+    data: "Servicio, importe, medio de pago y barbero (no guardamos datos de tarjetas)",
+    basis: "Necesarios para el servicio y para cumplir obligaciones contables y fiscales",
+    required: "Los registra el personal en el local",
+  },
+  {
+    what: "Administrar la tarjeta de fidelidad",
+    data: "Nombre, email verificado y, si los cargás, apellido, WhatsApp y cumpleaños (día y mes); visitas, premios y canjes",
+    basis: "Condiciones de la tarjeta, que aceptás al crearla",
+    required: "Nombre y email obligatorios; el resto es opcional",
+  },
+  {
+    what: "Enviarte novedades, promociones y beneficios por email",
+    data: "Nombre, email y, si lo cargaste, cumpleaños",
+    basis: "Tu consentimiento, con una casilla separada y desmarcada",
+    required: "Opcional. Podés darte de baja cuando quieras",
+  },
+  {
+    what: "Enviarte avisos de tu tarjeta y promociones por WhatsApp",
+    data: "Nombre y WhatsApp",
+    basis: "Tu consentimiento, con una casilla propia para ese canal",
+    required: "Opcional. Hoy no enviamos mensajes por WhatsApp: si empezamos, te lo vamos a informar antes",
+  },
+  {
+    what: "Poder demostrar qué aceptaste y cuándo",
+    data: "Versión del texto aceptado, fecha y hora, origen (reserva web, alta de tarjeta, panel del cliente, link de baja) y el turno o la ficha a la que corresponde",
+    basis: "La ley exige que el consentimiento sea expreso y se pueda acreditar (art. 5, Ley 25.326)",
+    required: "Se genera solo al aceptar o dar de baja",
+  },
+];
 
 const PrivacyPolicy = () => (
-  <div className="min-h-screen flex flex-col">
-    <SiteHeader />
-    <main className="flex-1 container px-4 py-16 max-w-3xl mx-auto">
-      <h1 className="font-serif text-4xl mb-2">Política de Privacidad</h1>
-      <p className="text-muted-foreground text-sm mb-10">Última actualización: mayo 2025</p>
+  <LegalPage title="Política de Privacidad" version={PRIVACY_VERSION}>
+    <Section title="1. Quién es responsable de tus datos">
+      <p>
+        {BUSINESS.name} (CUIT <Strong>{BUSINESS.cuit}</Strong>), con domicilio en {BUSINESS.address}, es responsable
+        de los datos personales que se recolectan en <Strong>{BUSINESS.site}</Strong> y en el local.
+      </p>
+      <p>Contacto para cualquier consulta sobre tus datos: <MailLink />.</p>
+    </Section>
 
-      <div className="space-y-8 text-muted-foreground leading-relaxed">
-        <section>
-          <h2 className="font-serif text-xl text-foreground mb-3">1. Responsable del tratamiento</h2>
-          <p>
-            MVP Barber, con domicilio en Av. Francisco Seguí 1157, Rada Tilly, Chubut, Argentina
-            (CUIT: <strong className="text-foreground">20-46981513-8</strong>), es el responsable del tratamiento
-            de los datos personales recolectados a través de este sitio web (<strong className="text-foreground">barberiampv.com</strong>).
-          </p>
-          <p className="mt-2">Contacto: <a href="mailto:contacto@barberiampv.com" className="text-primary hover:underline">contacto@barberiampv.com</a></p>
-        </section>
-
-        <section>
-          <h2 className="font-serif text-xl text-foreground mb-3">2. Datos que recolectamos</h2>
-          <p>Al reservar un turno, recolectamos los siguientes datos:</p>
-          <ul className="list-disc pl-5 mt-2 space-y-1">
-            <li>Nombre y apellido</li>
-            <li>Número de teléfono</li>
-            <li>Fecha de nacimiento (opcional, para reconocerte como cliente frecuente)</li>
-            <li>Historial de turnos (servicio, barbero, fecha, hora)</li>
-          </ul>
-          <p className="mt-3">
-            No recolectamos datos de pago, ya que los turnos no requieren pago online.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="font-serif text-xl text-foreground mb-3">3. Finalidad del tratamiento</h2>
-          <p>Tus datos se utilizan exclusivamente para:</p>
-          <ul className="list-disc pl-5 mt-2 space-y-1">
-            <li>Gestionar y confirmar reservas de turnos</li>
-            <li>Identificarte como cliente frecuente en futuras visitas</li>
-            <li>Enviarte notificaciones sobre tu turno (si corresponde)</li>
-            <li>Mejorar la calidad del servicio</li>
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="font-serif text-xl text-foreground mb-3">4. Almacenamiento y seguridad</h2>
-          <p>
-            Los datos se almacenan en servidores seguros provistos por Supabase (infraestructura en la nube
-            con cifrado en tránsito y en reposo). No vendemos ni compartimos tus datos con terceros,
-            salvo obligación legal.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="font-serif text-xl text-foreground mb-3">5. Tus derechos</h2>
-          <p>
-            De acuerdo con la <strong className="text-foreground">Ley 25.326 de Protección de Datos Personales</strong> (Argentina),
-            tenés derecho a:
-          </p>
-          <ul className="list-disc pl-5 mt-2 space-y-1">
-            <li><strong className="text-foreground">Acceder</strong> a los datos que tenemos sobre vos</li>
-            <li><strong className="text-foreground">Rectificar</strong> datos incorrectos o desactualizados</li>
-            <li><strong className="text-foreground">Eliminar</strong> tus datos de nuestra base</li>
-            <li><strong className="text-foreground">Oponerte</strong> al tratamiento de tus datos</li>
-          </ul>
-          <p className="mt-3">
-            Para ejercer cualquiera de estos derechos, escribinos a{" "}
-            <a href="mailto:contacto@barberiampv.com" className="text-primary hover:underline">contacto@barberiampv.com</a>.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="font-serif text-xl text-foreground mb-3">6. Cookies y rastreo</h2>
-          <p>
-            Este sitio puede utilizar cookies técnicas necesarias para el funcionamiento del sistema de
-            reservas. No utilizamos cookies de publicidad ni rastreo de comportamiento de terceros.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="font-serif text-xl text-foreground mb-3">7. Modificaciones</h2>
-          <p>
-            Podemos actualizar esta política en cualquier momento. La versión vigente siempre estará
-            disponible en esta página con la fecha de última actualización.
-          </p>
-        </section>
+    <Section title="2. Qué datos usamos, para qué y por qué">
+      <p>Solo pedimos los datos necesarios para cada finalidad:</p>
+      <div className="space-y-3">
+        {PURPOSES.map(p => (
+          <div key={p.what} className="rounded-lg border border-border p-4 text-sm space-y-1">
+            <p className="text-foreground font-medium">{p.what}</p>
+            <p><span className="text-foreground/80">Datos:</span> {p.data}</p>
+            <p><span className="text-foreground/80">Fundamento:</span> {p.basis}</p>
+            <p><span className="text-foreground/80">¿Es obligatorio?</span> {p.required}</p>
+          </div>
+        ))}
       </div>
+      <p>
+        Reservar un turno no te suscribe a promociones. La tarjeta funciona igual aunque no aceptes recibirlas.
+        No vendemos tus datos ni los usamos para publicidad de terceros. No usamos herramientas de analítica ni de
+        publicidad en el sitio.
+      </p>
+    </Section>
 
-      <div className="mt-12 pt-8 border-t border-border">
-        <Link to="/" className="text-primary hover:underline text-sm">← Volver al inicio</Link>
-      </div>
-    </main>
+    <Section title="3. Quién puede ver tus datos">
+      <ul className="list-disc pl-5 space-y-1">
+        <li><Strong>Personal de {BUSINESS.name}:</Strong> el dueño y los barberos, con cuentas personales y solo para atenderte y gestionar turnos, cobros y la tarjeta.</li>
+        <li><Strong>Soporte técnico:</Strong> el proveedor que desarrolla y mantiene el sitio accede para resolver problemas y verificar que funcione. Actúa por cuenta de {BUSINESS.name}.</li>
+        <li><Strong>Supabase Inc.:</Strong> aloja la base de datos y gestiona el inicio de sesión de la tarjeta, incluido el envío del código de acceso por email.</li>
+        <li><Strong>Servicio de correo:</Strong> envía los emails de confirmación y cancelación de turnos.</li>
+        <li><Strong>Autoridades:</Strong> solo cuando una ley o una orden judicial lo exija.</li>
+      </ul>
+    </Section>
 
-    <footer className="border-t border-border py-8 text-center text-xs text-muted-foreground">
-      <div className="container px-4">
-        <span>© {new Date().getFullYear()} MVP Barber · Rada Tilly, Chubut</span>
-      </div>
-    </footer>
-  </div>
+    <Section title="4. Transferencia internacional">
+      <p>
+        Los servidores de Supabase donde se guardan los datos están en los <Strong>Estados Unidos</Strong>. La
+        autoridad argentina de protección de datos no incluye a ese país entre los que tienen un nivel de protección
+        adecuado, por lo que esta transferencia debe hacerse con las garantías que exige la Ley 25.326 y su
+        reglamentación. Podés pedirnos información sobre esas garantías escribiendo a <MailLink />.
+      </p>
+    </Section>
+
+    <Section title="5. Cuánto tiempo guardamos tus datos">
+      <ul className="list-disc pl-5 space-y-1">
+        <li><Strong>Datos de reservas:</Strong> hasta 2 años desde tu último turno. Después se eliminan o se anonimizan.</li>
+        <li><Strong>Registros de cobro:</Strong> el plazo que exijan las normas contables y fiscales.</li>
+        <li><Strong>Tarjeta de fidelidad:</Strong> mientras la tengas activa. Si pasan 2 años sin visitas, se da de baja y se eliminan sus datos.</li>
+        <li><Strong>Promociones:</Strong> hasta que te des de baja o se elimine la tarjeta.</li>
+        <li><Strong>Registro de aceptaciones y bajas:</Strong> mientras uses el servicio y hasta 3 años después, para poder responder reclamos.</li>
+      </ul>
+      <p>Si pedís que eliminemos tus datos antes, lo hacemos, salvo lo que una ley nos obligue a conservar.</p>
+    </Section>
+
+    <Section title="6. Tus derechos">
+      <p>Según la <Strong>Ley 25.326 de Protección de Datos Personales</Strong>, podés:</p>
+      <ul className="list-disc pl-5 space-y-1">
+        <li><Strong>Acceder</Strong> a tus datos, gratis, cada 6 meses o antes si tenés un interés legítimo. Respondemos dentro de los 10 días corridos.</li>
+        <li><Strong>Rectificar, actualizar o suprimir</Strong> tus datos. Lo hacemos dentro de los 5 días hábiles.</li>
+        <li><Strong>Retirar tu consentimiento</Strong> para promociones en cualquier momento, sin afectar la tarjeta ni tus turnos.</li>
+        <li><Strong>Pedir que te quiten de nuestras listas de promociones</Strong> (retiro o bloqueo, art. 27 de la Ley 25.326).</li>
+      </ul>
+      <p>
+        Cómo hacerlo: escribí a <MailLink /> desde el email que nos diste o indicando tu teléfono. Para
+        promociones también podés usar el link de baja de cada email o las preferencias de{" "}
+        <Link to="/mi-tarjeta" className="text-primary hover:underline">tu tarjeta</Link>. Podemos pedirte que
+        acredites tu identidad antes de entregarte o modificar datos.
+      </p>
+      <p className="rounded-lg border border-border p-4 text-sm">
+        LA AGENCIA DE ACCESO A LA INFORMACIÓN PÚBLICA, en su carácter de Órgano de Control de la Ley N° 25.326,
+        tiene la atribución de atender las denuncias y reclamos que interpongan quienes resulten afectados en sus
+        derechos por incumplimiento de las normas vigentes en materia de protección de datos personales.
+      </p>
+    </Section>
+
+    <Section title="7. Seguridad">
+      <p>
+        Los datos viajan cifrados. Cada persona del equipo accede con su propia cuenta y según su rol. Los registros
+        de aceptación no se pueden modificar una vez guardados.
+      </p>
+    </Section>
+
+    <Section title="8. Cookies y almacenamiento en tu navegador">
+      <p>
+        El sitio solo guarda en tu navegador lo necesario para funcionar. No usa cookies de analítica ni de
+        publicidad. El detalle está en la <Link to="/cookies" className="text-primary hover:underline">política de cookies</Link>.
+      </p>
+    </Section>
+
+    <Section title="9. Cambios en esta política">
+      <p>
+        Si cambia esta política, publicamos la nueva versión con su fecha. Si el cambio afecta algo que autorizaste,
+        te vamos a pedir el consentimiento de nuevo antes de aplicarlo.
+      </p>
+    </Section>
+  </LegalPage>
 );
 
 export default PrivacyPolicy;

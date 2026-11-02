@@ -19,7 +19,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Barber } from "@/lib/booking";
-import { Pencil, Plus, Loader2, User, Mail, Trash2 } from "lucide-react";
+import { PortfolioManager } from "@/components/PortfolioManager";
+import { Pencil, Plus, Loader2, User, Mail, Trash2, Images } from "lucide-react";
 import { toast } from "sonner";
 
 const AdminBarbers = () => {
@@ -29,6 +30,7 @@ const AdminBarbers = () => {
   const [open, setOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [photosOf, setPhotosOf] = useState<Barber | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -78,7 +80,9 @@ const AdminBarbers = () => {
           {barbers.map(b => (
             <div key={b.id} className="luxury-card p-4">
               <div className="flex items-start gap-3">
-                <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center text-primary font-serif text-lg">{b.name[0]}</div>
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/15 flex items-center justify-center text-primary font-serif text-lg flex-shrink-0">
+                  {b.photo_url ? <img src={b.photo_url} alt={b.name} className="w-full h-full object-cover" /> : b.name[0]}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium">{b.name}</h3>
@@ -108,13 +112,20 @@ const AdminBarbers = () => {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2">{b.bio}</p>
-                  {!b.active && <span className="inline-block mt-2 text-[10px] uppercase tracking-wider text-destructive">Inactivo</span>}
+                  {!b.active && <span className="inline-block mt-2 text-[10px] uppercase tracking-[0.02em] text-destructive">Inactivo</span>}
+                  <Button variant="goldOutline" size="sm" className="mt-3" onClick={() => setPhotosOf(b)}>
+                    <Images className="h-4 w-4" /> Fotos (perfil y 6 cortes)
+                  </Button>
                 </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <Dialog open={!!photosOf} onOpenChange={o => { if (!o) { setPhotosOf(null); load(); } }}>
+        {photosOf && <PortfolioManager barberId={photosOf.id} barberName={photosOf.name} slug={photosOf.slug ?? null} asAdmin />}
+      </Dialog>
     </PanelLayout>
   );
 };

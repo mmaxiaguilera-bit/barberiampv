@@ -66,7 +66,7 @@ export const CollectPaymentDialog = ({ open, onOpenChange, appointment, onPaid }
     });
     setBusy(false);
     if (e2) return toast.error(e2.message);
-    toast.success("Cobro registrado");
+    toast.success(appointment.client_id ? "Cobro registrado · visita sumada a la tarjeta" : "Cobro registrado");
     onPaid();
     onOpenChange(false);
   };

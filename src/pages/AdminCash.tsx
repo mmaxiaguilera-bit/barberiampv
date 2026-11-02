@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { PanelLayout } from "@/components/PanelLayout";
+import { WalkInPaymentDialog } from "@/components/WalkInPaymentDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -133,7 +134,7 @@ const AdminCash = () => {
           </h1>
           <p className="text-sm text-muted-foreground capitalize">
             {date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-            {isClosed && <span className="ml-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-success"><Lock className="h-3 w-3" /> Cerrada</span>}
+            {isClosed && <span className="ml-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.02em] text-success"><Lock className="h-3 w-3" /> Cerrada</span>}
           </p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
@@ -171,7 +172,7 @@ const AdminCash = () => {
 
           {/* Income by method */}
           <div className="luxury-card p-4 mb-6">
-            <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">Por método de pago</h3>
+            <h3 className="text-sm uppercase tracking-[0.02em] text-muted-foreground mb-3">Por método de pago</h3>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               {PAYMENT_METHODS.map(m => (
                 <div key={m} className="p-3 rounded-md bg-secondary/30 border border-border">
@@ -250,7 +251,7 @@ const AdminCash = () => {
                   {expenses.map(e => (
                     <div key={e.id} className="p-3 rounded-md bg-secondary/30 border border-border flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="text-xs text-muted-foreground uppercase tracking-wider">{expenseCategoryLabel(e.category)}</div>
+                        <div className="text-xs text-muted-foreground uppercase tracking-[0.02em]">{expenseCategoryLabel(e.category)}</div>
                         <div className="text-sm">{e.description}</div>
                       </div>
                       <div className="font-serif text-destructive">{formatPrice(Number(e.amount))}</div>
@@ -308,77 +309,9 @@ const Stat = ({ icon: Icon, label, value, color, highlight }: any) => (
   <div className={cn("luxury-card p-4", highlight && "border-primary/40")}>
     <Icon className={`h-5 w-5 ${color} mb-2`} />
     <div className="font-serif text-xl">{value}</div>
-    <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</div>
+    <div className="text-[10px] text-muted-foreground uppercase tracking-[0.02em]">{label}</div>
   </div>
 );
-
-// ----- Walk-in dialog -----
-const WalkInPaymentDialog = ({ date, barbers, onClose }: { date: Date; barbers: Barber[]; onClose: () => void }) => {
-  const { user } = useAuth();
-  const [barberId, setBarberId] = useState(barbers[0]?.id ?? "");
-  const [serviceName, setServiceName] = useState("");
-  const [clientName, setClientName] = useState("");
-  const [amount, setAmount] = useState("");
-  const [tip, setTip] = useState("0");
-  const [method, setMethod] = useState<PaymentMethod>("efectivo");
-  const [busy, setBusy] = useState(false);
-
-  const submit = async () => {
-    if (!barberId || !serviceName.trim() || !amount) return toast.error("Completá los campos");
-    const amt = Number(amount), tp = Number(tip);
-    if (!Number.isFinite(amt) || amt < 0) return toast.error("Monto inválido");
-    setBusy(true);
-    const { error } = await supabase.from("payments").insert({
-      barber_id: barberId,
-      service_name: serviceName.trim(),
-      client_name: clientName.trim() || null,
-      amount: amt, tip: tp || 0,
-      payment_method: method,
-      payment_date: toISODate(date),
-      created_by: user?.id ?? null,
-    });
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success("Cobro registrado");
-    onClose();
-  };
-
-  return (
-    <DialogContent className="max-w-md">
-      <DialogHeader><DialogTitle className="font-serif text-2xl">Cobro walk-in</DialogTitle></DialogHeader>
-      <div className="space-y-3">
-        <div><Label>Barbero</Label>
-          <Select value={barberId} onValueChange={setBarberId}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{barbers.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div><Label>Servicio</Label><Input value={serviceName} onChange={e => setServiceName(e.target.value)} placeholder="Corte" /></div>
-          <div><Label>Cliente (opcional)</Label><Input value={clientName} onChange={e => setClientName(e.target.value)} /></div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div><Label>Monto</Label><Input type="number" min={0} step="0.01" value={amount} onChange={e => setAmount(e.target.value)} /></div>
-          <div><Label>Propina</Label><Input type="number" min={0} step="0.01" value={tip} onChange={e => setTip(e.target.value)} /></div>
-        </div>
-        <div>
-          <Label>Método</Label>
-          <div className="grid grid-cols-3 gap-2 mt-1.5">
-            {PAYMENT_METHODS.map(m => (
-              <button key={m} type="button" onClick={() => setMethod(m)}
-                className={cn("py-2 rounded-md text-xs border", method === m ? "bg-primary text-primary-foreground border-primary" : "bg-secondary/30 border-border")}>
-                {paymentMethodIcon(m)} {paymentMethodLabel(m)}
-              </button>
-            ))}
-          </div>
-        </div>
-        <Button variant="gold" className="w-full" onClick={submit} disabled={busy}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Registrar"}
-        </Button>
-      </div>
-    </DialogContent>
-  );
-};
 
 // ----- Expense dialog -----
 const ExpenseDialog = ({ date, userId, onClose }: { date: Date; userId: string | null; onClose: () => void }) => {

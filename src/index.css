@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+/* Tipografías alojadas en el propio sitio (licencia SIL OFL 1.1): se importan en main.tsx */
 
 @tailwind base;
 @tailwind components;
@@ -72,10 +72,16 @@
 @layer base {
   * {
     @apply border-border;
+    /* Barras de desplazamiento oscuras (la del navegador es blanca) */
+    scrollbar-color: hsl(var(--primary) / 0.35) transparent;
+    scrollbar-width: thin;
   }
 
   html {
     -webkit-font-smoothing: antialiased;
+    /* Los links del header bajan suave y dejan aire debajo del header flotante */
+    scroll-behavior: smooth;
+    scroll-padding-top: 2.5rem;
   }
 
   input:-webkit-autofill,
@@ -131,7 +137,8 @@
     transform: translateY(-2px);
     box-shadow: var(--shadow-elevated);
   }
+  /* Etiquetas chicas: interletrado mínimo */
   .tracking-luxury {
-    letter-spacing: 0.25em;
+    letter-spacing: 0.04em;
   }
 }

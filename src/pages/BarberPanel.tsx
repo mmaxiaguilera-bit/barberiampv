@@ -7,8 +7,10 @@ import { AppointmentSheet } from "@/components/AppointmentSheet";
 import { StatusBadge } from "@/components/StatusBadge";
 import { DAYS_SHORT, formatTime, formatPrice, toISODate, getDayAgenda, type DaySlot, type Schedule } from "@/lib/booking";
 import { Database } from "@/integrations/supabase/types";
-import { CalendarDays, ChevronLeft, ChevronRight, Loader2, Lock, Unlock, Phone, Scissors } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Loader2, Lock, Unlock, Phone, Scissors, Images } from "lucide-react";
 import { BlockSlotDialog } from "@/components/BlockSlotDialog";
+import { PortfolioManager } from "@/components/PortfolioManager";
+import { Dialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -26,6 +28,8 @@ const BarberPanel = () => {
   const [view, setView] = useState<"day" | "week">("day");
   const [date, setDate] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
   const [barberId, setBarberId] = useState<string | null>(null);
+  const [me, setMe] = useState<{ name: string; slug: string | null } | null>(null);
+  const [photosOpen, setPhotosOpen] = useState(false);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [appointments, setAppointments] = useState<Appt[]>([]);
   const [agenda, setAgenda] = useState<DaySlot[]>([]);
@@ -36,8 +40,8 @@ const BarberPanel = () => {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("barbers").select("id").eq("user_id", user.id).maybeSingle()
-      .then(({ data }) => setBarberId(data?.id ?? null));
+    supabase.from("barbers").select("id, name, slug").eq("user_id", user.id).maybeSingle()
+      .then(({ data }) => { setBarberId(data?.id ?? null); setMe(data ? { name: data.name, slug: data.slug } : null); });
   }, [user]);
 
   useEffect(() => {
@@ -140,11 +144,14 @@ const BarberPanel = () => {
               <h1 className="font-serif text-2xl sm:text-3xl">Mis turnos</h1>
               <p className="text-sm text-muted-foreground capitalize">{view === "day" ? dayLabel : `Semana del ${range[0].toLocaleDateString("es-AR", { day: "numeric", month: "short" })}`}</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <div className="flex rounded-md border border-border overflow-hidden">
                 <button onClick={() => setView("day")} className={cn("px-3 py-1.5 text-sm", view === "day" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>Día</button>
                 <button onClick={() => setView("week")} className={cn("px-3 py-1.5 text-sm", view === "week" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>Semana</button>
               </div>
+              <Button variant="outline" size="sm" onClick={() => setPhotosOpen(true)}>
+                <Images className="h-3.5 w-3.5" /> Mis cortes
+              </Button>
               <Button variant="goldOutline" size="sm" onClick={() => { setBlockDefaults({ reason: "Reservado por WhatsApp" }); setBlockOpen(true); }}>
                 <Lock className="h-3.5 w-3.5" /> Bloquear
               </Button>
@@ -188,6 +195,9 @@ const BarberPanel = () => {
           onCreated={load}
         />
       )}
+      <Dialog open={photosOpen} onOpenChange={setPhotosOpen}>
+        {photosOpen && barberId && me && <PortfolioManager barberId={barberId} barberName={me.name} slug={me.slug} />}
+      </Dialog>
     </PanelLayout>
   );
 };
@@ -307,7 +317,7 @@ const WeekGrid = ({ weekStart, appointments, onSelect }: { weekStart: Date; appo
         const isToday = iso === today;
         return (
           <div key={iso} className={cn("luxury-card p-3 min-h-[140px]", isToday && "border-primary/50")}>
-            <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+            <div className="text-xs uppercase tracking-[0.02em] text-muted-foreground mb-2">
               {DAYS_SHORT[(i + 1) % 7]} <span className={cn("ml-1", isToday && "text-primary font-semibold")}>{d.getDate()}</span>
             </div>
             {dayAppts.length === 0 ? (

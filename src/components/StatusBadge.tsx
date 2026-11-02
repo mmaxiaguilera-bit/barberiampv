@@ -18,7 +18,7 @@ const labels: Record<Status, string> = {
 };
 
 export const StatusBadge = ({ status }: { status: Status }) => (
-  <Badge variant="outline" className={cn("font-medium", styles[status])}>
+  <Badge variant="outline" className={cn(" font-normal", styles[status])}>
     {labels[status]}
   </Badge>
 );

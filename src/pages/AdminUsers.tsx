@@ -154,9 +154,9 @@ const AdminUsers = () => {
                     <div className="text-xs text-muted-foreground truncate">{p.email}</div>
                   </div>
                   <div className="flex flex-wrap gap-1.5 justify-end">
-                    {isAdmin && <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/15 text-primary"><Shield className="h-3 w-3" /> Admin</span>}
-                    {isBarber && <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-info/15 text-info"><Scissors className="h-3 w-3" /> Barbero</span>}
-                    {!isAdmin && !isBarber && <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Sin rol</span>}
+                    {isAdmin && <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.02em] px-2 py-0.5 rounded-full bg-primary/15 text-primary"><Shield className="h-3 w-3" /> Admin</span>}
+                    {isBarber && <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.02em] px-2 py-0.5 rounded-full bg-info/15 text-info"><Scissors className="h-3 w-3" /> Barbero</span>}
+                    {!isAdmin && !isBarber && <span className="text-[10px] uppercase tracking-[0.02em] text-muted-foreground">Sin rol</span>}
                   </div>
                 </div>
 

@@ -17,14 +17,35 @@ const schema = z.object({
 type Creds = { email: string; password: string };
 
 const Auth = () => {
-  const { user, role, loading } = useAuth();
+  const { user, role, customerId, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  // true si inició sesión en esta pantalla (no si llegó con una sesión ya abierta)
+  const [signedInHere, setSignedInHere] = useState(false);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
+
+  // Sesión de cliente abierta: no redirigir, para que pueda cambiar a una cuenta del personal
+  if (user && !role && customerId && signedInHere) return <Navigate to="/mi-tarjeta" replace />;
+  if (user && !role && customerId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="luxury-card p-6 max-w-md w-full text-center space-y-4">
+          <div className="flex justify-center"><Logo size={56} /></div>
+          <h1 className="font-serif text-2xl">Estás con tu cuenta de cliente</h1>
+          <p className="text-sm text-muted-foreground break-all">{user.email}</p>
+          <div className="flex flex-col gap-2">
+            <Button variant="gold" onClick={() => navigate("/mi-tarjeta")}>Ir a mi tarjeta</Button>
+            <Button variant="outline" onClick={signOut}>Salir y entrar como personal</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (user) return <Navigate to={role === "admin" ? "/admin" : "/panel"} replace />;
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -35,6 +56,7 @@ const Auth = () => {
     const { error } = await supabase.auth.signInWithPassword(parsed.data as Creds);
     setBusy(false);
     if (error) return toast.error(error.message);
+    setSignedInHere(true);
     toast.success("¡Bienvenido!");
   };
 
@@ -84,7 +106,8 @@ const Auth = () => {
               Continuar con Google
             </Button>
             <p className="text-xs text-muted-foreground text-center mt-6">
-              ¿Sos cliente? Reservá tu turno desde la <a href="/" className="text-primary hover:underline">página principal</a>.
+              ¿Sos cliente? Reservá tu turno desde la <a href="/" className="text-primary hover:underline">página principal</a> o
+              entrá a tu <a href="/mi-tarjeta" className="text-primary hover:underline">tarjeta de fidelidad</a>.
             </p>
           </div>
         </div>

@@ -57,6 +57,9 @@ Para redesplegar: entrar a Easypanel → hacer click en **Implementar**
 | `/admin/usuarios` | Usuarios |
 | `/admin/clientes` | Clientes |
 | `/mi-turno` | Consulta de turno por teléfono |
+| `/mi-tarjeta` | Tarjeta de fidelidad del cliente (acceso por código al email) |
+| `/baja` | Baja de promociones desde link de email |
+| `/barberos/:slug` | Página pública de cada barbero con sus mejores cortes y reserva directa |
 | `/privacidad` | Política de Privacidad (Ley 25.326) |
 | `/terminos` | Términos y Condiciones (Ley 24.240) |
 
@@ -70,7 +73,15 @@ Para redesplegar: entrar a Easypanel → hacer click en **Implementar**
 | `barbers` | Barberos (nombre, bio, activo, orden) |
 | `services` | Servicios (nombre, precio, duración, activo) |
 | `schedules` | Horarios disponibles por barbero y día |
-| `clients` | Clientes registrados (email, nombre, fecha de nacimiento) |
+| `clients` | Clientes registrados (email, nombre, cumpleaños, cuenta verificada) |
+| `loyalty_*` | Programa de fidelidad: programa, saldos, visitas, premios, auditoría |
+| `marketing_consents` | Historial de consentimiento para promociones por email |
+
+---
+
+## Programa de fidelidad
+
+Ver [`docs/FIDELIZACION.md`](docs/FIDELIZACION.md): reglas, modelo de datos, entorno de pruebas y pasos antes de producción.
 
 ---
 

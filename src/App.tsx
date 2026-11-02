@@ -9,6 +9,7 @@ import Index from "./pages/Index.tsx";
 import MyAppointment from "./pages/MyAppointment.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
 import TermsOfUse from "./pages/TermsOfUse.tsx";
+import CookiesPolicy from "./pages/CookiesPolicy.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const Auth = lazy(() => import("./pages/Auth.tsx"));
@@ -22,6 +23,9 @@ const AdminSchedules = lazy(() => import("./pages/AdminSchedules.tsx"));
 const AdminCash = lazy(() => import("./pages/AdminCash.tsx"));
 const AdminReports = lazy(() => import("./pages/AdminReports.tsx"));
 const AdminClients = lazy(() => import("./pages/AdminClients.tsx"));
+const LoyaltyCard = lazy(() => import("./pages/LoyaltyCard.tsx"));
+const Unsubscribe = lazy(() => import("./pages/Unsubscribe.tsx"));
+const BarberProfile = lazy(() => import("./pages/BarberProfile.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -47,8 +51,12 @@ const App = () => (
             <Route path="/admin/usuarios" element={<AdminUsers />} />
             <Route path="/admin/clientes" element={<AdminClients />} />
             <Route path="/mi-turno" element={<MyAppointment />} />
+            <Route path="/mi-tarjeta" element={<LoyaltyCard />} />
+            <Route path="/baja" element={<Unsubscribe />} />
+            <Route path="/barberos/:slug" element={<BarberProfile />} />
             <Route path="/privacidad" element={<PrivacyPolicy />} />
             <Route path="/terminos" element={<TermsOfUse />} />
+            <Route path="/cookies" element={<CookiesPolicy />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>

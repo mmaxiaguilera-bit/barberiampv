@@ -143,7 +143,7 @@ const MyAppointment = () => {
                           <span>{a.barber_name}</span>
                         </div>
                       </div>
-                      <span className={`text-xs font-semibold uppercase tracking-wider ${cfg.color}`}>
+                      <span className={`text-xs font-semibold uppercase tracking-[0.02em] ${cfg.color}`}>
                         {cfg.label}
                       </span>
                     </div>

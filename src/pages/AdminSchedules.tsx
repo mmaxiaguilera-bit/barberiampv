@@ -8,9 +8,10 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Barber, DAYS_ES, Schedule, formatTime } from "@/lib/booking";
-import { Loader2, Plus, Trash2, Clock, Lock, Calendar as CalIcon, Save } from "lucide-react";
+import { Loader2, Plus, Trash2, Clock, Lock, Calendar as CalIcon, Save, Plane } from "lucide-react";
 import { toast } from "sonner";
 import { BlockSlotDialog } from "@/components/BlockSlotDialog";
+import { TripDialog } from "@/components/TripDialog";
 
 type Block = {
   id: string;
@@ -19,6 +20,27 @@ type Block = {
   start_time: string | null;
   end_time: string | null;
   reason: string | null;
+};
+
+// Bloqueos para mostrar: los días completos seguidos con el mismo motivo (un viaje) van en una sola fila
+type BlockGroup = { ids: string[]; from: string; to: string; start_time: string | null; end_time: string | null; reason: string | null };
+
+const nextDay = (iso: string) => {
+  const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+};
+
+const groupBlocks = (blocks: Block[]): BlockGroup[] => {
+  const groups: BlockGroup[] = [];
+  for (const b of blocks) {
+    const last = groups[groups.length - 1];
+    if (last && !b.start_time && !last.start_time && last.reason === b.reason && nextDay(last.to) === b.block_date) {
+      last.ids.push(b.id); last.to = b.block_date;
+    } else {
+      groups.push({ ids: [b.id], from: b.block_date, to: b.block_date, start_time: b.start_time, end_time: b.end_time, reason: b.reason });
+    }
+  }
+  return groups;
 };
 
 type SlotDraft = { id: string; start: string; end: string; slotMin: string; active: boolean };
@@ -227,6 +249,7 @@ const BlocksManager = ({ barberId, barberName }: { barberId: string; barberName:
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [tripOpen, setTripOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -244,9 +267,9 @@ const BlocksManager = ({ barberId, barberName }: { barberId: string; barberName:
 
   useEffect(() => { load(); }, [load]);
 
-  const remove = async (id: string) => {
-    if (!confirm("¿Eliminar este bloqueo?")) return;
-    const { error } = await supabase.from("barber_blocks").delete().eq("id", id);
+  const remove = async (ids: string[]) => {
+    if (!confirm(ids.length > 1 ? `¿Eliminar estos ${ids.length} días bloqueados?` : "¿Eliminar este bloqueo?")) return;
+    const { error } = await supabase.from("barber_blocks").delete().in("id", ids);
     if (error) return toast.error(error.message);
     load();
   };
@@ -255,9 +278,14 @@ const BlocksManager = ({ barberId, barberName }: { barberId: string; barberName:
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">Bloqueos futuros de <span className="text-foreground">{barberName}</span></p>
-        <Button variant="gold" size="sm" onClick={() => setOpen(true)}>
-          <Plus className="h-3.5 w-3.5" /> Nuevo bloqueo
-        </Button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="goldOutline" size="sm" onClick={() => setTripOpen(true)}>
+            <Plane className="h-3.5 w-3.5" /> Me voy de viaje
+          </Button>
+          <Button variant="gold" size="sm" onClick={() => setOpen(true)}>
+            <Plus className="h-3.5 w-3.5" /> Nuevo bloqueo
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -269,22 +297,25 @@ const BlocksManager = ({ barberId, barberName }: { barberId: string; barberName:
         </div>
       ) : (
         <div className="space-y-2">
-          {blocks.map(b => {
-            const d = new Date(b.block_date + "T12:00:00");
-            const fullDay = !b.start_time;
+          {groupBlocks(blocks).map(g => {
+            const fmt = (iso: string, opts: Intl.DateTimeFormatOptions) => new Date(iso + "T12:00:00").toLocaleDateString("es-AR", opts);
+            const fullDay = !g.start_time;
+            const trip = g.ids.length > 1;
             return (
-              <div key={b.id} className="luxury-card p-3 flex items-center gap-3">
-                <Lock className="h-4 w-4 text-primary flex-shrink-0" />
+              <div key={g.ids[0]} className="luxury-card p-3 flex items-center gap-3">
+                {trip ? <Plane className="h-4 w-4 text-destructive flex-shrink-0" /> : <Lock className="h-4 w-4 text-primary flex-shrink-0" />}
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm capitalize">
-                    {d.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}
+                  <div className="font-medium text-sm first-letter:uppercase">
+                    {trip
+                      ? `Del ${fmt(g.from, { weekday: "short", day: "numeric", month: "short" })} al ${fmt(g.to, { weekday: "short", day: "numeric", month: "short" })}`
+                      : fmt(g.from, { weekday: "long", day: "numeric", month: "long" })}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {fullDay ? "Día completo" : `${formatTime(b.start_time!)} – ${formatTime(b.end_time!)}`}
-                    {b.reason ? ` · ${b.reason}` : ""}
+                    {trip ? `${g.ids.length} días completos` : fullDay ? "Día completo" : `${formatTime(g.start_time!)} – ${formatTime(g.end_time!)}`}
+                    {g.reason ? ` · ${g.reason}` : ""}
                   </div>
                 </div>
-                <Button size="icon" variant="outline" onClick={() => remove(b.id)} className="text-destructive hover:bg-destructive/10">
+                <Button size="icon" variant="outline" onClick={() => remove(g.ids)} className="text-destructive hover:bg-destructive/10">
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -294,6 +325,7 @@ const BlocksManager = ({ barberId, barberName }: { barberId: string; barberName:
       )}
 
       <BlockSlotDialog open={open} onOpenChange={setOpen} barberId={barberId} onCreated={load} />
+      <TripDialog open={tripOpen} onOpenChange={setTripOpen} barberId={barberId} barberName={barberName} onCreated={load} />
     </div>
   );
 };

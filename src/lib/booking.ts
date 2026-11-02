@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type Barber = { id: string; name: string; bio: string | null; photo_url: string | null; active: boolean; display_order: number };
+export type Barber = { id: string; name: string; bio: string | null; photo_url: string | null; active: boolean; display_order: number; slug?: string | null };
 export type Service = { id: string; name: string; description: string | null; duration_minutes: number; price: number; active: boolean };
 export type Schedule = { id: string; barber_id: string; day_of_week: number; start_time: string; end_time: string; slot_minutes: number; active: boolean };
 
@@ -178,4 +178,25 @@ export const getDayAgenda = async (
   }
 
   return { slots, openStart, openEnd, slotMinutes, closed: fullDayBlocked };
+};
+
+/** Días completos bloqueados (viajes, feriados) de un barbero entre dos fechas ISO, inclusive. */
+export const getFullDayBlockedDates = async (barberId: string, fromISO: string, toISO: string): Promise<Set<string>> => {
+  const { data } = await supabase
+    .from("barber_blocks")
+    .select("block_date")
+    .eq("barber_id", barberId)
+    .is("start_time", null)
+    .gte("block_date", fromISO)
+    .lte("block_date", toISO);
+  return new Set((data ?? []).map(b => b.block_date));
+};
+
+/** Fechas ISO de un rango, inclusive. */
+export const datesInRange = (from: Date, to: Date) => {
+  const out: string[] = [];
+  const d = new Date(from); d.setHours(12, 0, 0, 0);
+  const end = new Date(to); end.setHours(12, 0, 0, 0);
+  while (d <= end) { out.push(toISODate(d)); d.setDate(d.getDate() + 1); }
+  return out;
 };

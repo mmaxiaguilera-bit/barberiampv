@@ -216,7 +216,7 @@ const Stat = ({ icon: Icon, label, value, color, highlight }: any) => (
   <div className={`luxury-card p-4 ${highlight ? "border-primary/40" : ""}`}>
     <Icon className={`h-5 w-5 ${color} mb-2`} />
     <div className="font-serif text-xl">{value}</div>
-    <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</div>
+    <div className="text-[10px] text-muted-foreground uppercase tracking-[0.02em]">{label}</div>
   </div>
 );
 

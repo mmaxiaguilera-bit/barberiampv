@@ -14,8 +14,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        serif: ['"Playfair Display"', 'serif'],
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        // Títulos: Gloock (romana de vidriera). Textos, menú, botones y etiquetas: Onest
+        serif: ['Gloock', 'Georgia', 'serif'],
+        sans: ['Onest', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
