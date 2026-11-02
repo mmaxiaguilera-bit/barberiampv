@@ -23,9 +23,10 @@ export const MONTHS = [
 
 // ----- Lanzamiento -----
 // Debe coincidir con public.loyalty_settings.starts_on (las visitas anteriores no suman)
-export const LOYALTY_START_DATE = "2026-11-03";
-export const LOYALTY_START_LABEL = "martes 3 de noviembre";
-export const loyaltyNotStarted = (today = new Date().toLocaleDateString("en-CA")) => today < LOYALTY_START_DATE;
+// La fecha de inicio se configura en Admin → Tarjeta (loyalty_settings.starts_on)
+export const loyaltyNotStarted = (startsOn: string, today = new Date().toLocaleDateString("en-CA")) => today < startsOn;
+export const formatStartLabel = (startsOn: string) =>
+  new Date(startsOn + "T12:00:00").toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
 
 const INVITE_DISMISSED_KEY = "mvp_loyalty_invite_dismissed";
 const PENDING_SIGNUP_KEY = "mvp_loyalty_pending_signup";
@@ -54,14 +55,28 @@ export const loyaltyProgress = (cycleVisits: number, visitsRequired: number): Lo
 
 const daysInMonth = (month: number) => ([4, 6, 9, 11].includes(month) ? 30 : month === 2 ? 29 : 31);
 
-export const isValidBirthday = (day: number | null, month: number | null) => {
-  if (day == null && month == null) return true;
+export const isValidBirthday = (day: number | null, month: number | null, year: number | null = null) => {
+  if (day == null && month == null) return year == null;
   if (day == null || month == null) return false;
-  return month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth(month);
+  if (!(month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth(month))) return false;
+  if (year == null) return true;
+  const d = new Date(year, month - 1, day);
+  return year >= 1900 && d.getMonth() === month - 1 && d <= new Date();
 };
 
-export const formatBirthday = (day: number | null | undefined, month: number | null | undefined) =>
-  day && month ? `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}` : "";
+// Menor de 18 con fecha completa (sin año no se puede saber)
+export const isMinor = (day: number | null, month: number | null, year: number | null, today = new Date()) => {
+  if (day == null || month == null || year == null) return false;
+  const eighteen = new Date(year + 18, month - 1, day);
+  const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return eighteen > t;
+};
+
+export const MINOR_PROMO_NOTICE =
+  "Sos menor de 18: tu tarjeta funciona igual, pero para recibir promociones necesitás la autorización de tu madre, padre o tutor. Consultá en la barbería.";
+
+export const formatBirthday = (day: number | null | undefined, month: number | null | undefined, year?: number | null) =>
+  day && month ? `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}${year ? `/${year}` : ""}` : "";
 
 // ----- Consentimiento -----
 export type ConsentChannel = "email" | "whatsapp";
@@ -99,10 +114,28 @@ export const downloadFile = (content: string, filename: string, type = "text/csv
   URL.revokeObjectURL(url);
 };
 
+// ----- Premios en el camino (loyalty_programs.milestones) -----
+export interface Milestone { visits: number; reward: string }
+export const parseMilestones = (raw: unknown): Milestone[] =>
+  Array.isArray(raw)
+    ? raw.filter((m): m is Milestone => !!m && typeof m.visits === "number" && typeof m.reward === "string")
+        .sort((a, b) => a.visits - b.visits)
+    : [];
+// Solo las posiciones: el cliente ve un regalo sorpresa, no qué es
+export const milestoneVisits = (raw: unknown) => parseMilestones(raw).map(m => m.visits);
+
 // ----- Mensajes de error -----
 const BACKEND_ERRORS: Record<string, string> = {
   forbidden: "No tenés permiso para hacer esto.",
-  before_loyalty_start: "La tarjeta empieza a contar el martes 3 de noviembre: no se pueden sumar visitas anteriores.",
+  before_loyalty_start: "No se pueden sumar visitas anteriores a la fecha de inicio de la tarjeta.",
+  loyalty_paused: "La tarjeta de fidelidad está pausada por el momento.",
+  birthday_reward_required: "Escribí cuál es el beneficio de cumpleaños.",
+  invalid_settings: "Revisá los datos de la configuración.",
+  invalid_program: "Revisá la cantidad de visitas (1 a 100) y el premio.",
+  invalid_milestones: "Revisá los premios en el camino: cada uno en una visita distinta, antes de la última, y con descripción.",
+  card_exists: "Ese cliente ya tiene tarjeta.",
+  contact_required: "Cargá al menos un teléfono o un email.",
+  invalid_initial_visits: "Los sellos que ya tenía tienen que ser menos que las visitas del premio.",
   not_authenticated: "Tu sesión venció. Volvé a ingresar.",
   email_not_verified: "Primero tenés que verificar tu email.",
   no_loyalty_card: "Todavía no tenés tarjeta de fidelidad.",
@@ -121,6 +154,8 @@ const BACKEND_ERRORS: Record<string, string> = {
   both_verified: "No se pueden unir dos tarjetas verificadas con emails distintos.",
   same_client: "Elegí dos fichas distintas.",
   appointment_not_found: "No encontramos ese turno.",
+  invalid_birthday: "Revisá la fecha de nacimiento (el año va junto con día y mes).",
+  minor_marketing_not_allowed: "Los menores de 18 necesitan autorización de su madre, padre o tutor para recibir promociones.",
 };
 
 export const loyaltyErrorMessage = (error: { message?: string } | null | undefined) => {
@@ -154,6 +189,7 @@ export interface PendingSignup {
   whatsapp: string;
   birth_day: number | null;
   birth_month: number | null;
+  birth_year?: number | null;
   marketing_opt_in: boolean;
   whatsapp_opt_in: boolean;
   accepted_terms: boolean;

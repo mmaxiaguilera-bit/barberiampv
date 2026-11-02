@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CONSENT_TEXT, MONTHS, WHATSAPP_CONSENT_TEXT, authErrorMessage, isValidBirthday, normalizeWhatsapp, savePendingSignup, whatsappError } from "@/lib/loyalty";
+import { CONSENT_TEXT, MINOR_PROMO_NOTICE, MONTHS, WHATSAPP_CONSENT_TEXT, authErrorMessage, isMinor, isValidBirthday, normalizeWhatsapp, savePendingSignup, whatsappError } from "@/lib/loyalty";
 import { Gift, Loader2, Mail, ArrowLeft, AlertCircle } from "lucide-react";
 import { z } from "zod";
 
@@ -32,6 +32,7 @@ export const LoyaltyAccessForm = ({ onVerified, showHeading = true, initialMode 
   const [firstName, setFirstName] = useState("");
   const [birthDay, setBirthDay] = useState<string>("");
   const [birthMonth, setBirthMonth] = useState<string>("");
+  const [birthYear, setBirthYear] = useState<string>("");
   const [whatsapp, setWhatsapp] = useState("");
   const [optIn, setOptIn] = useState(false);
   const [waOptIn, setWaOptIn] = useState(false);
@@ -59,6 +60,10 @@ export const LoyaltyAccessForm = ({ onVerified, showHeading = true, initialMode 
     return () => clearTimeout(t);
   }, [cooldown]);
 
+  const minor = isMinor(birthDay ? Number(birthDay) : null, birthMonth ? Number(birthMonth) : null, birthYear ? Number(birthYear) : null);
+  // Un menor no puede marcar promociones: se destildan solas
+  useEffect(() => { if (minor) { setOptIn(false); setWaOptIn(false); } }, [minor]);
+
   const sendCode = async () => {
     setError(null);
     if (mode === "signup" && (firstName.trim().length < 2 || firstName.trim().length > 50)) {
@@ -70,13 +75,14 @@ export const LoyaltyAccessForm = ({ onVerified, showHeading = true, initialMode 
     if (mode === "signup") {
       const d = birthDay ? Number(birthDay) : null;
       const m = birthMonth ? Number(birthMonth) : null;
+      const y = birthYear ? Number(birthYear) : null;
       const waError = whatsappError(whatsapp, waOptIn);
       if (waError) return setError(waError);
-      if (!isValidBirthday(d, m)) return setError("Completá día y mes de tu cumpleaños, o dejá ambos vacíos.");
+      if (!isValidBirthday(d, m, y)) return setError("Revisá tu fecha de nacimiento: completá día y mes (y el año si querés), o dejalo vacío.");
       if (!acceptedTerms) return setError("Para crear la tarjeta tenés que aceptar las condiciones.");
       savePendingSignup({
         email: parsedEmail.data, first_name: firstName.trim(), whatsapp: normalizeWhatsapp(whatsapp),
-        birth_day: d, birth_month: m, marketing_opt_in: optIn, whatsapp_opt_in: waOptIn,
+        birth_day: d, birth_month: m, birth_year: y, marketing_opt_in: optIn, whatsapp_opt_in: waOptIn,
         accepted_terms: true,
       });
     }
@@ -186,18 +192,11 @@ export const LoyaltyAccessForm = ({ onVerified, showHeading = true, initialMode 
           <>
             <WhatsappField value={whatsapp} onChange={setWhatsapp} />
             <div>
-              <Label>Cumpleaños <span className="text-muted-foreground font-normal">(opcional)</span></Label>
-              <BirthdayPicker day={birthDay} month={birthMonth} onDay={setBirthDay} onMonth={setBirthMonth} />
+              <Label>Fecha de nacimiento <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+              <BirthdayPicker day={birthDay} month={birthMonth} onDay={setBirthDay} onMonth={setBirthMonth} year={birthYear} onYear={setBirthYear} />
             </div>
             <TermsCheckbox checked={acceptedTerms} onChange={setAcceptedTerms} />
-            <label className="flex items-start gap-3 text-sm cursor-pointer">
-              <Checkbox checked={optIn} onCheckedChange={v => setOptIn(v === true)} className="mt-0.5" />
-              <span className="text-muted-foreground">{CONSENT_TEXT}</span>
-            </label>
-            <label className="flex items-start gap-3 text-sm cursor-pointer">
-              <Checkbox checked={waOptIn} onCheckedChange={v => setWaOptIn(v === true)} className="mt-0.5" />
-              <span className="text-muted-foreground">{WHATSAPP_CONSENT_TEXT}</span>
-            </label>
+            <PromoCheckboxes minor={minor} optIn={optIn} onOptIn={setOptIn} waOptIn={waOptIn} onWaOptIn={setWaOptIn} />
             <SignupPrivacyNotice />
           </>
         )}
@@ -223,10 +222,14 @@ export const LoyaltyAccessForm = ({ onVerified, showHeading = true, initialMode 
 // =====================================================================
 const NONE = "none";
 
-export const BirthdayPicker = ({ day, month, onDay, onMonth, allowClear = true }: {
-  day: string; month: string; onDay: (v: string) => void; onMonth: (v: string) => void; allowClear?: boolean;
+const THIS_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 100 }, (_, i) => THIS_YEAR - 5 - i);
+
+export const BirthdayPicker = ({ day, month, onDay, onMonth, year, onYear, allowClear = true }: {
+  day: string; month: string; onDay: (v: string) => void; onMonth: (v: string) => void;
+  year?: string; onYear?: (v: string) => void; allowClear?: boolean;
 }) => (
-  <div className="grid grid-cols-[5rem_1fr] gap-2 mt-1.5">
+  <div className={cn("grid gap-2 mt-1.5", onYear ? "grid-cols-[4.5rem_1fr_5.5rem]" : "grid-cols-[5rem_1fr]")}>
     <Select value={day || NONE} onValueChange={v => onDay(v === NONE ? "" : v)}>
       <SelectTrigger aria-label="Día"><SelectValue placeholder="Día" /></SelectTrigger>
       <SelectContent className="max-h-64">
@@ -241,7 +244,33 @@ export const BirthdayPicker = ({ day, month, onDay, onMonth, allowClear = true }
         {MONTHS.map((m, i) => <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>)}
       </SelectContent>
     </Select>
+    {onYear && (
+      <Select value={year || NONE} onValueChange={v => onYear(v === NONE ? "" : v)}>
+        <SelectTrigger aria-label="Año"><SelectValue placeholder="Año" /></SelectTrigger>
+        <SelectContent className="max-h-64">
+          {allowClear && <SelectItem value={NONE}>Año</SelectItem>}
+          {YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    )}
   </div>
+);
+
+// Casillas de promociones (email y WhatsApp). Si es menor: desactivadas, con el motivo.
+export const PromoCheckboxes = ({ minor, optIn, onOptIn, waOptIn, onWaOptIn }: {
+  minor: boolean; optIn: boolean; onOptIn: (v: boolean) => void; waOptIn: boolean; onWaOptIn: (v: boolean) => void;
+}) => (
+  <>
+    <label className={cn("flex items-start gap-3 text-sm", minor ? "opacity-50" : "cursor-pointer")}>
+      <Checkbox checked={optIn} disabled={minor} onCheckedChange={v => onOptIn(v === true)} className="mt-0.5" />
+      <span className="text-muted-foreground">{CONSENT_TEXT}</span>
+    </label>
+    <label className={cn("flex items-start gap-3 text-sm", minor ? "opacity-50" : "cursor-pointer")}>
+      <Checkbox checked={waOptIn} disabled={minor} onCheckedChange={v => onWaOptIn(v === true)} className="mt-0.5" />
+      <span className="text-muted-foreground">{WHATSAPP_CONSENT_TEXT}</span>
+    </label>
+    {minor && <p className="text-xs text-primary border border-primary/40 rounded-md px-3 py-2">{MINOR_PROMO_NOTICE}</p>}
+  </>
 );
 
 export const WhatsappField = ({ value, onChange, id = "wa" }: { value: string; onChange: (v: string) => void; id?: string }) => (

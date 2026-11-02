@@ -24,9 +24,15 @@ const PURPOSES: { what: string; data: string; basis: string; required: string }[
   },
   {
     what: "Administrar la tarjeta de fidelidad",
-    data: "Nombre, email verificado y, si los cargás, apellido, WhatsApp y cumpleaños (día y mes); visitas, premios y canjes",
+    data: "Nombre, email verificado y, si los cargás, apellido, WhatsApp y fecha de nacimiento (día y mes; el año es opcional); visitas, premios y canjes",
     basis: "Condiciones de la tarjeta, que aceptás al crearla",
     required: "Nombre y email obligatorios; el resto es opcional",
+  },
+  {
+    what: "Saber si sos menor de edad",
+    data: "Año de nacimiento, junto con día y mes",
+    basis: "Lo cargás voluntariamente. Lo usamos solo para no activar promociones a menores de 18 sin la autorización de su madre, padre o tutor",
+    required: "Opcional. Si no lo cargás, la tarjeta funciona igual",
   },
   {
     what: "Enviarte novedades, promociones y beneficios por email",

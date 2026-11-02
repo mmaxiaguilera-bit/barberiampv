@@ -3,7 +3,7 @@ import { Navigate, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { Loader2, LogOut, LayoutDashboard, CalendarDays, Users, Users2, Scissors, UserCog, Wallet, BarChart3, Clock, CheckCircle2, Menu, Plus } from "lucide-react";
+import { Loader2, LogOut, LayoutDashboard, CalendarDays, Users, Users2, Scissors, UserCog, Wallet, BarChart3, Clock, CheckCircle2, Menu, Plus, Gift } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,6 +71,7 @@ const SidebarContent = () => {
     { to: "/admin/horarios", icon: Clock, label: "Horarios" },
     { to: "/admin/barberos", icon: Users, label: "Barberos" },
     { to: "/admin/clientes", icon: Users2, label: "Clientes" },
+    { to: "/admin/tarjeta", icon: Gift, label: "Tarjeta" },
     { to: "/admin/usuarios", icon: UserCog, label: "Usuarios" },
   ];
   const barberLinks = [

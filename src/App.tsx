@@ -23,6 +23,7 @@ const AdminSchedules = lazy(() => import("./pages/AdminSchedules.tsx"));
 const AdminCash = lazy(() => import("./pages/AdminCash.tsx"));
 const AdminReports = lazy(() => import("./pages/AdminReports.tsx"));
 const AdminClients = lazy(() => import("./pages/AdminClients.tsx"));
+const AdminLoyalty = lazy(() => import("./pages/AdminLoyalty.tsx"));
 const LoyaltyCard = lazy(() => import("./pages/LoyaltyCard.tsx"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe.tsx"));
 const BarberProfile = lazy(() => import("./pages/BarberProfile.tsx"));
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/admin/reportes" element={<AdminReports />} />
             <Route path="/admin/usuarios" element={<AdminUsers />} />
             <Route path="/admin/clientes" element={<AdminClients />} />
+            <Route path="/admin/tarjeta" element={<AdminLoyalty />} />
             <Route path="/mi-turno" element={<MyAppointment />} />
             <Route path="/mi-tarjeta" element={<LoyaltyCard />} />
             <Route path="/baja" element={<Unsubscribe />} />

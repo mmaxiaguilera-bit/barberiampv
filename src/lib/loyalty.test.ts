@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   loyaltyProgress, isValidBirthday, csvCell, toCsv, loyaltyErrorMessage, authErrorMessage,
   latestConsent, formatBirthday, normalizeWhatsapp, isValidWhatsapp, whatsappError,
-  savePendingSignup, readPendingSignup, PENDING_SIGNUP_TTL_MS,
+  savePendingSignup, readPendingSignup, PENDING_SIGNUP_TTL_MS, isMinor,
 } from "./loyalty";
 
 describe("loyaltyProgress", () => {
@@ -155,5 +155,23 @@ describe("datos de alta pendientes", () => {
     savePendingSignup(p);
     expect(readPendingSignup(Date.now() + PENDING_SIGNUP_TTL_MS + 1)).toBeNull();
     expect(localStorage.getItem("mvp_loyalty_pending_signup")).toBeNull();
+  });
+});
+
+describe("año de nacimiento y menores", () => {
+  it("el año va solo junto con día y mes", () => {
+    expect(isValidBirthday(null, null, 1990)).toBe(false);
+    expect(isValidBirthday(5, 3, 1990)).toBe(true);
+    expect(isValidBirthday(29, 2, 2023)).toBe(false); // 2023 no es bisiesto
+    expect(isValidBirthday(29, 2, 2024)).toBe(true);
+    expect(isValidBirthday(5, 3, 1850)).toBe(false);
+    expect(isValidBirthday(5, 3, 2999)).toBe(false); // futuro
+  });
+  it("detecta menores de 18 según la fecha de hoy", () => {
+    const hoy = new Date(2026, 10, 3); // 3/11/2026
+    expect(isMinor(3, 11, 2008, hoy)).toBe(false); // cumple 18 hoy
+    expect(isMinor(4, 11, 2008, hoy)).toBe(true);  // cumple 18 mañana
+    expect(isMinor(5, 3, 1990, hoy)).toBe(false);
+    expect(isMinor(5, 3, null, hoy)).toBe(false);  // sin año no se sabe
   });
 });

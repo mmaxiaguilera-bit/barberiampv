@@ -1,9 +1,10 @@
+import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { StampCard } from "./StampCard";
-import { LOYALTY_START_LABEL, loyaltyNotStarted } from "@/lib/loyalty";
+import { formatStartLabel, loyaltyNotStarted, milestoneVisits } from "@/lib/loyalty";
 import { Gift, Scissors, UserPlus } from "lucide-react";
 
 type Program = Database["public"]["Tables"]["loyalty_programs"]["Row"];
@@ -11,12 +12,14 @@ type Program = Database["public"]["Tables"]["loyalty_programs"]["Row"];
 // Sección de la portada que presenta la tarjeta con las condiciones vigentes del programa
 export const LoyaltySection = ({ hasSession, onJoin }: { hasSession: boolean; onJoin: () => void }) => {
   const [program, setProgram] = useState<Program | null>(null);
+  const { settings: loyaltySettings } = useLoyaltySettings();
 
   useEffect(() => {
     supabase.from("loyalty_programs").select("*").eq("active", true).maybeSingle().then(({ data }) => setProgram(data));
   }, []);
 
-  if (!program) return null;
+  // Pausada desde Admin → Tarjeta: la sección no se muestra
+  if (!program || !loyaltySettings.enabled) return null;
 
   const required = program.visits_required;
   const steps = [
@@ -53,11 +56,8 @@ export const LoyaltySection = ({ hasSession, onJoin }: { hasSession: boolean; on
             <Button variant="gold" size="lg" onClick={onJoin} className="uppercase tracking-[0.02em] w-full sm:w-auto">
               <Gift className="h-5 w-5" /> {hasSession ? "Ver mi tarjeta" : "Crear mi tarjeta gratis"}
             </Button>
-            {loyaltyNotStarted() && (
-              <p className="text-xs text-primary mt-4">Empieza a sumar visitas el {LOYALTY_START_LABEL}.</p>
-            )}
-            {program.is_demo && (
-              <p className="text-xs text-amber-300/90 mt-4">Programa de demostración: las condiciones reales las define MVP Barber.</p>
+            {loyaltyNotStarted(loyaltySettings.startsOn) && (
+              <p className="text-xs text-primary mt-4">Empieza a sumar visitas el {formatStartLabel(loyaltySettings.startsOn)}.</p>
             )}
           </div>
 
@@ -68,7 +68,7 @@ export const LoyaltySection = ({ hasSession, onJoin }: { hasSession: boolean; on
                 name="Tu nombre"
                 cycleVisits={Math.max(0, required - 3)}
                 visitsRequired={required}
-                rewardDescription={program.reward_description}
+                rewardDescription={program.reward_description} milestones={milestoneVisits(program.milestones)}
               />
             </div>
           </div>

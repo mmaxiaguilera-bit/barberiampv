@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ClientDetailSheet } from "@/components/loyalty/ClientDetailSheet";
-import { ProgramSettingsDialog } from "@/components/loyalty/ProgramSettingsDialog";
-import { downloadFile, formatBirthday, latestConsent, loyaltyErrorMessage, toCsv } from "@/lib/loyalty";
+import { downloadFile, formatBirthday, isMinor, latestConsent, loyaltyErrorMessage, toCsv } from "@/lib/loyalty";
 import { toISODate } from "@/lib/booking";
 import { Loader2, Users2, Search, Phone, Calendar, Star, BadgeCheck, Mail, Gift, Download, Settings2, AlertCircle, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -44,7 +44,6 @@ const AdminClients = () => {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<string | null>(null);
-  const [programOpen, setProgramOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   const load = useCallback(async () => {
@@ -52,7 +51,7 @@ const AdminClients = () => {
     const [{ data: clientData, error }, { data: prog }] = await Promise.all([
       supabase
         .from("clients")
-        .select(`id, first_name, last_name, phone, email, whatsapp, birth_date, birth_day, birth_month, user_id, created_at,
+        .select(`id, first_name, last_name, phone, email, whatsapp, birth_date, birth_day, birth_month, birth_year, user_id, created_at,
           appointments(appointment_date, status),
           loyalty_accounts(cycle_visits),
           loyalty_visits(visit_date, appointment_id, reversed_at),
@@ -77,7 +76,7 @@ const AdminClients = () => {
         email: c.email,
         whatsapp: c.whatsapp,
         birthday: c.birth_day
-          ? formatBirthday(c.birth_day, c.birth_month)
+          ? formatBirthday(c.birth_day, c.birth_month, c.birth_year) + (isMinor(c.birth_day, c.birth_month, c.birth_year) ? " (menor)" : "")
           : c.birth_date ? new Date(c.birth_date + "T12:00:00").toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" }) : "",
         verified: !!c.user_id,
         subscribed: latestConsent(c.marketing_consents, "email")?.granted ?? false,
@@ -130,7 +129,7 @@ const AdminClients = () => {
       { key: "email", label: "Email" },
       { key: "whatsapp", label: "WhatsApp" },
       { key: "whatsapp_ok", label: "Acepta WhatsApp" },
-      { key: "birthday", label: "Cumpleaños (DD/MM)" },
+      { key: "birthday", label: "Nacimiento (DD/MM/AAAA)" },
       { key: "consent_at", label: "Fecha de consentimiento" },
       { key: "consent_source", label: "Origen del consentimiento" },
       { key: "consent_version", label: "Versión del texto" },
@@ -151,7 +150,7 @@ const AdminClients = () => {
         </div>
         {isAdmin && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setProgramOpen(true)}><Settings2 className="h-4 w-4" /> Programa</Button>
+            <Button variant="outline" size="sm" asChild><Link to="/admin/tarjeta"><Settings2 className="h-4 w-4" /> Tarjeta</Link></Button>
             <Button variant="goldOutline" size="sm" onClick={exportCsv} disabled={exporting}>
               {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Exportar suscriptos
             </Button>
@@ -254,7 +253,6 @@ const AdminClients = () => {
       )}
 
       <ClientDetailSheet clientId={selected} onOpenChange={o => !o && setSelected(null)} onChanged={load} />
-      {isAdmin && <ProgramSettingsDialog open={programOpen} onOpenChange={setProgramOpen} program={program} onSaved={load} />}
     </PanelLayout>
   );
 };

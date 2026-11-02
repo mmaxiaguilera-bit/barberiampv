@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "./ui/sheet";
 import { CalendarSearch, Gift, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
 
 const linkClass = " text-xs uppercase tracking-[0.02em] text-foreground/85 hover:text-primary transition-colors whitespace-nowrap";
 
@@ -16,6 +17,8 @@ export const SiteHeader = ({ onBook, overlay = false }: { onBook?: () => void; o
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  // Tarjeta pausada desde Admin: no se ofrece en el menú
+  const loyaltyOn = useLoyaltySettings().settings.enabled;
   // En la portada los links son anclas; en otras páginas vuelven a la portada en esa sección
   const anchor = (id: string) => (pathname === "/" ? `#${id}` : `/#${id}`);
 
@@ -39,16 +42,20 @@ export const SiteHeader = ({ onBook, overlay = false }: { onBook?: () => void; o
           {/* Centro: secciones + tarjeta */}
           <nav className="hidden xl:flex flex-1 items-center justify-center gap-8">
             {sections.map(s => <a key={s.label} href={s.href} className={linkClass}>{s.label}</a>)}
-            <Link to="/mi-tarjeta" className={cn(linkClass, "text-primary hover:text-primary/80 inline-flex items-center gap-1.5")}>
-              <Gift className="h-4 w-4" /> Mi tarjeta
-            </Link>
+            {loyaltyOn && (
+              <Link to="/mi-tarjeta" className={cn(linkClass, "text-primary hover:text-primary/80 inline-flex items-center gap-1.5")}>
+                <Gift className="h-4 w-4" /> Mi tarjeta
+              </Link>
+            )}
           </nav>
 
           {/* Derecha: consultar (discreto) + reservar; en pantallas chicas, tarjeta y menú */}
           <div className="flex flex-1 xl:flex-none items-center justify-end gap-2">
-            <Link to="/mi-tarjeta" aria-label="Mi tarjeta de fidelidad" className="xl:hidden inline-flex h-10 w-10 items-center justify-center rounded-full text-primary hover:bg-primary/10">
-              <Gift className="h-4 w-4" />
-            </Link>
+            {loyaltyOn && (
+              <Link to="/mi-tarjeta" aria-label="Mi tarjeta de fidelidad" className="xl:hidden inline-flex h-10 w-10 items-center justify-center rounded-full text-primary hover:bg-primary/10">
+                <Gift className="h-4 w-4" />
+              </Link>
+            )}
             <Button variant="outline" asChild className="hidden md:inline-flex rounded-full h-11 sm:h-12 px-6 font-normal text-xs uppercase tracking-[0.02em] bg-transparent border-border text-foreground/85 hover:text-foreground hover:border-primary/50 hover:bg-transparent">
               <Link to="/mi-turno">Consultar turno</Link>
             </Button>
@@ -64,9 +71,11 @@ export const SiteHeader = ({ onBook, overlay = false }: { onBook?: () => void; o
                 {sections.map(s => (
                   <a key={s.label} href={s.href} onClick={() => setMenuOpen(false)} className="py-3 border-b border-border text-sm uppercase tracking-[0.02em]">{s.label}</a>
                 ))}
-                <Link to="/mi-tarjeta" onClick={() => setMenuOpen(false)} className="py-3 border-b border-border text-sm uppercase tracking-[0.02em] text-primary flex items-center gap-2">
-                  <Gift className="h-4 w-4" /> Mi tarjeta de fidelidad
-                </Link>
+                {loyaltyOn && (
+                  <Link to="/mi-tarjeta" onClick={() => setMenuOpen(false)} className="py-3 border-b border-border text-sm uppercase tracking-[0.02em] text-primary flex items-center gap-2">
+                    <Gift className="h-4 w-4" /> Mi tarjeta de fidelidad
+                  </Link>
+                )}
                 <Link to="/mi-turno" onClick={() => setMenuOpen(false)} className="py-3 border-b border-border text-sm uppercase tracking-[0.02em] flex items-center gap-2">
                   <CalendarSearch className="h-4 w-4 text-primary" /> Consultar mi turno
                 </Link>

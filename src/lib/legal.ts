@@ -2,7 +2,7 @@
 // public.legal_document_versions: al cambiar un texto, crear una versión nueva
 // (migración) y actualizar estas constantes. Ver docs/LEGAL.md.
 export const TERMS_VERSION = "terminos-v2-2026-10";
-export const PRIVACY_VERSION = "privacidad-v2-2026-10";
+export const PRIVACY_VERSION = "privacidad-v3-2026-11";
 export const LEGAL_UPDATED_AT = "22 de octubre de 2026";
 
 // Anticipación mínima para cancelar online (la valida también cancel_my_appointment)

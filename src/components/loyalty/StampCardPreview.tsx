@@ -2,9 +2,10 @@ import { ReactNode, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { Logo } from "@/components/Logo";
-import { LOYALTY_START_LABEL, loyaltyNotStarted } from "@/lib/loyalty";
+import { formatStartLabel, loyaltyNotStarted } from "@/lib/loyalty";
 import { Check, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
 
 type Program = Database["public"]["Tables"]["loyalty_programs"]["Row"];
 
@@ -91,6 +92,7 @@ const StampCardPreview = ({ name, program }: { name: string; program: Program })
 // izquierda, y el formulario (children) a la derecha.
 export const LoyaltySignupLayout = ({ name, children }: { name: string; children: ReactNode }) => {
   const program = useActiveProgram();
+  const { settings: loyaltySettings } = useLoyaltySettings();
   const required = program?.visits_required ?? 10;
   const steps = [
     { title: "Registrate", text: "Completá tus datos en pocos segundos." },
@@ -111,8 +113,8 @@ export const LoyaltySignupLayout = ({ name, children }: { name: string; children
           <p className="text-muted-foreground text-base sm:text-lg mt-4 max-w-md">
             Sumá visitas, disfrutá beneficios exclusivos y viví la experiencia MVP Barber.
           </p>
-          {loyaltyNotStarted() && (
-            <p className="text-sm text-primary mt-3">La tarjeta empieza a sumar visitas el {LOYALTY_START_LABEL}.</p>
+          {loyaltyNotStarted(loyaltySettings.startsOn) && (
+            <p className="text-sm text-primary mt-3">La tarjeta empieza a sumar visitas el {formatStartLabel(loyaltySettings.startsOn)}.</p>
           )}
         </div>
 

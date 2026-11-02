@@ -8,7 +8,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { loyaltyErrorMessage } from "@/lib/loyalty";
+import { loyaltyErrorMessage, milestoneVisits } from "@/lib/loyalty";
 import { Gift, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -70,7 +70,7 @@ export const ClientLoyaltyPanel = ({ clientId, name, appointmentId, compact, ref
     <div className="space-y-3">
       <StampCard
         name={name} cycleVisits={cycle} visitsRequired={program.visits_required}
-        rewardDescription={program.reward_description} isDemo={program.is_demo} compact={compact}
+        rewardDescription={program.reward_description} milestones={milestoneVisits(program.milestones)} isDemo={program.is_demo} compact={compact}
       />
       {rewards.map(r => (
         <div key={r.id} className="flex items-center gap-3 rounded-lg border border-primary/50 bg-primary/10 p-3">

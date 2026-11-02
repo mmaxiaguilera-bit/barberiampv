@@ -284,6 +284,7 @@ export type Database = {
         Row: {
           birth_date: string | null
           birth_day: number | null
+          birth_year: number | null
           birth_month: number | null
           created_at: string
           email: string | null
@@ -300,6 +301,7 @@ export type Database = {
         Insert: {
           birth_date?: string | null
           birth_day?: number | null
+          birth_year?: number | null
           birth_month?: number | null
           created_at?: string
           email?: string | null
@@ -316,6 +318,7 @@ export type Database = {
         Update: {
           birth_date?: string | null
           birth_day?: number | null
+          birth_year?: number | null
           birth_month?: number | null
           created_at?: string
           email?: string | null
@@ -513,6 +516,7 @@ export type Database = {
           deactivated_at: string | null
           id: string
           is_demo: boolean
+          milestones: Json
           name: string
           reward_description: string
           visits_required: number
@@ -524,6 +528,7 @@ export type Database = {
           deactivated_at?: string | null
           id?: string
           is_demo?: boolean
+          milestones?: Json
           name: string
           reward_description: string
           visits_required: number
@@ -535,6 +540,7 @@ export type Database = {
           deactivated_at?: string | null
           id?: string
           is_demo?: boolean
+          milestones?: Json
           name?: string
           reward_description?: string
           visits_required?: number
@@ -626,6 +632,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      loyalty_settings: {
+        Row: {
+          birthday_enabled: boolean
+          birthday_reward: string | null
+          enabled: boolean
+          id: boolean
+          starts_on: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          birthday_enabled?: boolean
+          birthday_reward?: string | null
+          enabled?: boolean
+          id?: boolean
+          starts_on: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          birthday_enabled?: boolean
+          birthday_reward?: string | null
+          enabled?: boolean
+          id?: boolean
+          starts_on?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       loyalty_visits: {
         Row: {
@@ -1003,6 +1039,22 @@ export type Database = {
         }
         Returns: string
       }
+      admin_create_card: {
+        Args: {
+          _birth_day?: number
+          _birth_month?: number
+          _birth_year?: number
+          _client_id: string | null
+          _email?: string
+          _first_name?: string
+          _initial_visits?: number
+          _last_name?: string
+          _note?: string
+          _phone?: string
+          _whatsapp?: string
+        }
+        Returns: string
+      }
       admin_export_marketing_contacts: {
         Args: never
         Returns: {
@@ -1031,8 +1083,18 @@ export type Database = {
         Args: { _reason: string; _visit_id: string }
         Returns: boolean
       }
+      admin_update_loyalty_settings: {
+        Args: {
+          _birthday_enabled: boolean
+          _birthday_reward: string
+          _enabled: boolean
+          _starts_on: string
+        }
+        Returns: undefined
+      }
       admin_update_loyalty_program: {
         Args: {
+          _milestones?: Json
           _name?: string
           _reward_description: string
           _visits_required: number
@@ -1109,6 +1171,7 @@ export type Database = {
         Returns: {
           birth_day: number | null
           birth_month: number | null
+          birth_year: number | null
           first_name: string
           last_name: string | null
           whatsapp: string | null
@@ -1116,6 +1179,7 @@ export type Database = {
       }
       loyalty_register: {
         Args: {
+          _birth_year?: number
           _birth_day?: number
           _birth_month?: number
           _consent_version?: string

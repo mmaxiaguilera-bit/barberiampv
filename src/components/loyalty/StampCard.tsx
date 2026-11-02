@@ -1,6 +1,7 @@
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
-import { LOYALTY_START_LABEL, loyaltyNotStarted, loyaltyProgress } from "@/lib/loyalty";
+import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
+import { formatStartLabel, loyaltyNotStarted, loyaltyProgress } from "@/lib/loyalty";
 import { Check, Gift } from "lucide-react";
 
 interface Props {
@@ -10,9 +11,12 @@ interface Props {
   rewardDescription: string;
   isDemo?: boolean;
   compact?: boolean;
+  // Visitas con premio sorpresa en el camino (ej. 3 y 6): se ve un regalo, no qué es
+  milestones?: number[];
 }
 
-export const StampCard = ({ name, cycleVisits, visitsRequired, rewardDescription, isDemo, compact }: Props) => {
+export const StampCard = ({ name, cycleVisits, visitsRequired, rewardDescription, compact, milestones = [] }: Props) => {
+  const { settings: loyaltySettings } = useLoyaltySettings();
   const p = loyaltyProgress(cycleVisits, visitsRequired);
   const cols = visitsRequired <= 6 ? visitsRequired : visitsRequired <= 10 ? 5 : 6;
   // En fichas del personal los sellos van chicos y en una sola tira
@@ -45,16 +49,17 @@ export const StampCard = ({ name, cycleVisits, visitsRequired, rewardDescription
         {Array.from({ length: visitsRequired }, (_, i) => {
           const filled = i < p.stamps;
           const last = i === visitsRequired - 1;
+          const mid = milestones.includes(i + 1);
           return (
             <div
               key={i}
               className={cn(
                 "aspect-square rounded-full border flex items-center justify-center transition-colors",
                 filled ? "bg-gradient-to-br from-primary to-[hsl(38_65%_50%)] border-primary text-primary-foreground"
-                  : "border-primary/30 bg-background/40 text-primary/40",
+                  : mid ? "border-primary/60 bg-primary/10 text-primary" : "border-primary/30 bg-background/40 text-primary/40",
               )}
             >
-              {filled ? <Check className="h-1/2 w-1/2 animate-in zoom-in-50 fade-in duration-300" strokeWidth={3} /> : last ? <Gift className="h-1/2 w-1/2" /> : null}
+              {filled ? <Check className="h-1/2 w-1/2 animate-in zoom-in-50 fade-in duration-300" strokeWidth={3} /> : last ? <Gift className="h-1/2 w-1/2" /> : mid ? <Gift className="h-2/5 w-2/5" /> : null}
             </div>
           );
         })}
@@ -70,14 +75,9 @@ export const StampCard = ({ name, cycleVisits, visitsRequired, rewardDescription
           <p className="text-[10px] uppercase tracking-[0.02em] text-muted-foreground mt-1">visitas</p>
         </div>
       </div>
-      {loyaltyNotStarted() && (
+      {loyaltyNotStarted(loyaltySettings.startsOn) && (
         <p className="relative mt-3 text-[11px] text-primary border border-primary/30 rounded-md px-2 py-1 bg-primary/5">
-          La tarjeta empieza a sumar visitas el {LOYALTY_START_LABEL}.
-        </p>
-      )}
-      {isDemo && (
-        <p className="relative mt-3 text-[11px] text-amber-300/90 border border-amber-300/30 rounded-md px-2 py-1 bg-amber-300/5">
-          Programa de demostración: las condiciones reales las define MVP Barber.
+          La tarjeta empieza a sumar visitas el {formatStartLabel(loyaltySettings.startsOn)}.
         </p>
       )}
     </div>

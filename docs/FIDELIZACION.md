@@ -127,3 +127,16 @@ Actualizados el 22/10/2026 (Términos, Privacidad, Cookies y registro de aceptac
 - El CSV de "Exportar suscriptos" (consentimiento de email) incluye WhatsApp (solo dígitos) y si aceptó ese canal.
 - Migración: `20261022140000_loyalty_whatsapp.sql`. `marketing_consents.seq` ordena los registros de forma exacta (varios en la misma transacción comparten fecha).
 
+
+## Admin → Tarjeta (02/11/2026)
+
+`/admin/tarjeta` (solo admin), migraciones `20261102130000_birth_year_minors.sql`, `20261102140000_loyalty_settings_admin.sql` y `20261102150000_loyalty_milestones_cards.sql`.
+
+- **Estado:** encender o pausar (`loyalty_settings.enabled`). Con la tarjeta pausada, se oculta de la web, no suma visitas (`_loyalty_credit`) y no se crean tarjetas (trigger en `loyalty_accounts`).
+- **Configuración** (un solo formulario con vista previa):
+  - Premio final.
+  - **Premios en el camino** (`loyalty_programs.milestones`, lista `[{visits, reward}]`). El cliente ve un regalo sorpresa en ese círculo y el premio aparece en su lista al llegar. Si se revierte la visita, el premio se anula.
+  - (El beneficio de cumpleaños se quitó de la pantalla a pedido. Las columnas `birthday_*` de `loyalty_settings` quedan sin uso.)
+  - Fecha de inicio.
+- **Clientes con tarjeta:** lista y **Agregar tarjeta** (`admin_create_card`), para un cliente existente o uno nuevo, con los sellos de la tarjeta física. Los premios en el camino que ya pasó con esos sellos no se acreditan, porque se asume que los usó en papel. Si tiene email, el cliente después entra a `/mi-tarjeta` con ese email y ve la misma tarjeta.
+- **Año de nacimiento** (opcional, solo junto con día y mes): un menor de 18 no puede aceptar promociones por su cuenta (`is_minor`, trigger en `marketing_consents`). Política de privacidad v3.

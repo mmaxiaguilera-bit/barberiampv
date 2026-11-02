@@ -1,3 +1,4 @@
+import { milestoneVisits } from "@/lib/loyalty";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,7 +43,7 @@ export const LoyaltyPromoDialog = ({ open, onOpenChange }: { open: boolean; onOp
             {program && (
               <StampCard
                 name="Tu nombre" cycleVisits={Math.min(3, required - 1)} visitsRequired={required}
-                rewardDescription={program.reward_description} isDemo={program.is_demo} compact
+                rewardDescription={program.reward_description} milestones={milestoneVisits(program.milestones)} isDemo={program.is_demo} compact
               />
             )}
 

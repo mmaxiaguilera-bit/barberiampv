@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ClientLoyaltyPanel } from "./ClientLoyaltyPanel";
 import { WalkInPaymentDialog } from "@/components/WalkInPaymentDialog";
 import { Barber, toISODate } from "@/lib/booking";
-import { formatBirthday, latestConsent, loyaltyErrorMessage } from "@/lib/loyalty";
+import { formatBirthday, isMinor, latestConsent, loyaltyErrorMessage } from "@/lib/loyalty";
 import {
   BadgeCheck, Phone, Mail, Cake, Loader2, Plus, Undo2, History, Gift, Bell, Link2, Users, ScrollText, Scissors, MessageCircle,
 } from "lucide-react";
@@ -169,7 +169,7 @@ export const ClientDetailSheet = ({ clientId, onOpenChange, onChanged }: Props) 
                 )}
                 {(client.birth_day || client.birth_date) && (
                   <span className="flex items-center gap-1.5"><Cake className="h-3.5 w-3.5" />
-                    {client.birth_day ? formatBirthday(client.birth_day, client.birth_month) : new Date(client.birth_date + "T12:00:00").toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" })}
+                    {client.birth_day ? formatBirthday(client.birth_day, client.birth_month, client.birth_year) + (isMinor(client.birth_day, client.birth_month, client.birth_year) ? " · menor de 18" : "") : new Date(client.birth_date + "T12:00:00").toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" })}
                   </span>
                 )}
               </div>

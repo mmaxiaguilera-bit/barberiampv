@@ -7,19 +7,19 @@ import { BookingDialog } from "@/components/BookingDialog";
 import { StampCard } from "@/components/loyalty/StampCard";
 import { LoyaltySignupLayout } from "@/components/loyalty/StampCardPreview";
 import { cn } from "@/lib/utils";
-import { LoyaltyAccessForm, BirthdayPicker, ErrorText, SignupPrivacyNotice, TermsCheckbox, WhatsappField } from "@/components/loyalty/LoyaltyAccessForm";
+import { LoyaltyAccessForm, BirthdayPicker, ErrorText, PromoCheckboxes, SignupPrivacyNotice, TermsCheckbox, WhatsappField } from "@/components/loyalty/LoyaltyAccessForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Database } from "@/integrations/supabase/types";
 import {
-  CONSENT_TEXT, CONSENT_VERSION, WHATSAPP_CONSENT_TEXT, WHATSAPP_CONSENT_VERSION, clearPendingSignup,
-  isValidBirthday, loyaltyErrorMessage, loyaltyProgress, normalizeWhatsapp,
-  readPendingSignup, whatsappError, type PendingSignup,
+  CONSENT_VERSION, WHATSAPP_CONSENT_VERSION, clearPendingSignup,
+  isMinor, isValidBirthday, loyaltyErrorMessage, loyaltyProgress, normalizeWhatsapp,
+  readPendingSignup, whatsappError, type PendingSignup, milestoneVisits,
 } from "@/lib/loyalty";
 import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal";
+import { useLoyaltySettings } from "@/hooks/useLoyaltySettings";
 import { Gift, Loader2, LogOut, Scissors, AlertCircle, BadgeCheck } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,6 +29,8 @@ type Reward = Database["public"]["Tables"]["loyalty_rewards"]["Row"];
 
 const LoyaltyCard = () => {
   const { user, customerId, loading } = useAuth();
+  const { settings } = useLoyaltySettings();
+  const paused = !settings.enabled;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -37,9 +39,14 @@ const LoyaltyCard = () => {
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
         ) : !user ? (
-          <LoyaltyAccessForm withPreview />
+          paused ? (
+            <div className="max-w-lg mx-auto space-y-6">
+              <PausedNotice />
+              <LoyaltyAccessForm initialMode="login" />
+            </div>
+          ) : <LoyaltyAccessForm withPreview />
         ) : !customerId ? (
-          <CompleteSignup />
+          paused ? <div className="max-w-lg mx-auto"><PausedNotice /></div> : <CompleteSignup />
         ) : (
           <CardDashboard clientId={customerId} />
         )}
@@ -50,6 +57,16 @@ const LoyaltyCard = () => {
 
 export default LoyaltyCard;
 
+const PausedNotice = () => (
+  <div className="luxury-card p-6 text-center space-y-2">
+    <Gift className="h-8 w-8 text-primary mx-auto" />
+    <h1 className="font-serif text-2xl">Tarjeta pausada</h1>
+    <p className="text-sm text-muted-foreground">
+      Por el momento no se crean tarjetas nuevas ni se suman visitas. Si ya tenés tarjeta, podés entrar a verla.
+    </p>
+  </div>
+);
+
 // =====================================================================
 // Usuario verificado sin tarjeta: crearla con los datos del formulario
 // =====================================================================
@@ -59,6 +76,7 @@ const CompleteSignup = () => {
   const [firstName, setFirstName] = useState((user?.user_metadata?.full_name as string) ?? "");
   const [birthDay, setBirthDay] = useState("");
   const [birthMonth, setBirthMonth] = useState("");
+  const [birthYear, setBirthYear] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [optIn, setOptIn] = useState(false);
   const [waOptIn, setWaOptIn] = useState(false);
@@ -82,6 +100,7 @@ const CompleteSignup = () => {
       _whatsapp_consent_version: WHATSAPP_CONSENT_VERSION,
       _terms_version: TERMS_VERSION,
       _privacy_notice_version: PRIVACY_VERSION,
+      _birth_year: p.birth_year ?? undefined,
     });
     setBusy(false);
     if (err) { setError(loyaltyErrorMessage(err)); return; }
@@ -105,6 +124,7 @@ const CompleteSignup = () => {
         setWhatsapp(pending.whatsapp ?? "");
         setBirthDay(pending.birth_day ? String(pending.birth_day) : "");
         setBirthMonth(pending.birth_month ? String(pending.birth_month) : "");
+        setBirthYear(pending.birth_year ? String(pending.birth_year) : "");
         setOptIn(pending.marketing_opt_in);
         setWaOptIn(pending.whatsapp_opt_in ?? false);
         setAcceptedTerms(pending.accepted_terms === true);
@@ -120,11 +140,14 @@ const CompleteSignup = () => {
           setWhatsapp(k.whatsapp ?? "");
           setBirthDay(k.birth_day ? String(k.birth_day) : "");
           setBirthMonth(k.birth_month ? String(k.birth_month) : "");
+          setBirthYear(k.birth_year ? String(k.birth_year) : "");
         }
       }
       setChecking(false);
     })();
   }, [user, refreshRole, register]);
+
+  const minor = isMinor(birthDay ? Number(birthDay) : null, birthMonth ? Number(birthMonth) : null, birthYear ? Number(birthYear) : null);
 
   if (checking) {
     return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
@@ -133,14 +156,15 @@ const CompleteSignup = () => {
   const submit = () => {
     const d = birthDay ? Number(birthDay) : null;
     const m = birthMonth ? Number(birthMonth) : null;
+    const y = birthYear ? Number(birthYear) : null;
     if (firstName.trim().length < 2) return setError("Ingresá tu nombre (mínimo 2 letras).");
     const waError = whatsappError(whatsapp, waOptIn);
     if (waError) return setError(waError);
-    if (!isValidBirthday(d, m)) return setError("Completá día y mes de tu cumpleaños, o dejá ambos vacíos.");
+    if (!isValidBirthday(d, m, y)) return setError("Revisá tu fecha de nacimiento: completá día y mes (y el año si querés), o dejalo vacío.");
     if (!acceptedTerms) return setError("Para crear la tarjeta tenés que aceptar las condiciones.");
     register({
-      first_name: firstName.trim(), whatsapp: normalizeWhatsapp(whatsapp), birth_day: d, birth_month: m,
-      marketing_opt_in: optIn, whatsapp_opt_in: waOptIn, accepted_terms: true,
+      first_name: firstName.trim(), whatsapp: normalizeWhatsapp(whatsapp), birth_day: d, birth_month: m, birth_year: y,
+      marketing_opt_in: optIn && !minor, whatsapp_opt_in: waOptIn && !minor, accepted_terms: true,
     });
   };
 
@@ -171,18 +195,11 @@ const CompleteSignup = () => {
         </div>
         <WhatsappField id="wa2" value={whatsapp} onChange={setWhatsapp} />
         <div>
-          <Label>Cumpleaños <span className="text-muted-foreground font-normal">(opcional)</span></Label>
-          <BirthdayPicker day={birthDay} month={birthMonth} onDay={setBirthDay} onMonth={setBirthMonth} />
+          <Label>Fecha de nacimiento <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+          <BirthdayPicker day={birthDay} month={birthMonth} onDay={setBirthDay} onMonth={setBirthMonth} year={birthYear} onYear={setBirthYear} />
         </div>
         <TermsCheckbox checked={acceptedTerms} onChange={setAcceptedTerms} />
-        <label className="flex items-start gap-3 text-sm cursor-pointer">
-          <Checkbox checked={optIn} onCheckedChange={v => setOptIn(v === true)} className="mt-0.5" />
-          <span className="text-muted-foreground">{CONSENT_TEXT}</span>
-        </label>
-        <label className="flex items-start gap-3 text-sm cursor-pointer">
-          <Checkbox checked={waOptIn} onCheckedChange={v => setWaOptIn(v === true)} className="mt-0.5" />
-          <span className="text-muted-foreground">{WHATSAPP_CONSENT_TEXT}</span>
-        </label>
+        <PromoCheckboxes minor={minor} optIn={optIn && !minor} onOptIn={setOptIn} waOptIn={waOptIn && !minor} onWaOptIn={setWaOptIn} />
         <SignupPrivacyNotice />
         {error && <ErrorText>{error}</ErrorText>}
         <Button variant="gold" className="w-full" disabled={busy}>
@@ -208,6 +225,7 @@ interface CardData {
 const CardDashboard = ({ clientId }: { clientId: string }) => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const { settings } = useLoyaltySettings();
   const [data, setData] = useState<CardData | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
@@ -269,11 +287,17 @@ const CardDashboard = ({ clientId }: { clientId: string }) => {
           name={`${client.first_name} ${client.last_name ?? ""}`.trim()}
           cycleVisits={cycle}
           visitsRequired={required}
-          rewardDescription={program.reward_description}
+          rewardDescription={program.reward_description} milestones={milestoneVisits(program.milestones)}
           isDemo={program.is_demo}
         />
       ) : (
         <div className="luxury-card p-6 text-sm text-muted-foreground text-center">El programa de fidelidad no está activo en este momento.</div>
+      )}
+
+      {!settings.enabled && (
+        <p className="text-sm text-amber-300/90 border border-amber-300/30 rounded-md px-3 py-2 bg-amber-300/5">
+          La tarjeta está pausada: por ahora no se suman visitas. Tu progreso y tus premios se conservan.
+        </p>
       )}
 
       <div className="luxury-card p-4 text-center">
