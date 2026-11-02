@@ -176,6 +176,11 @@ export const LoyaltyAccessForm = ({ onVerified, showHeading = true, initialMode 
         <div>
           <Label htmlFor="em">Email</Label>
           <Input id="em" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} maxLength={255} />
+          {mode === "signup" && (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Si ya reservaste turno, usá el mismo email: así tus próximas visitas se suman solas.
+            </p>
+          )}
         </div>
         {mode === "signup" && (
           <>

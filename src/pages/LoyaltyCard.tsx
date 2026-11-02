@@ -65,6 +65,7 @@ const CompleteSignup = () => {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [knownName, setKnownName] = useState<string | null>(null);
   const checkedFor = useRef<string | null>(null);
 
   const register = useCallback(async (p: Omit<PendingSignup, "email">) => {
@@ -109,6 +110,17 @@ const CompleteSignup = () => {
         setAcceptedTerms(pending.accepted_terms === true);
         // Solo se crea sola si aceptó las condiciones en el formulario anterior
         if (pending.accepted_terms === true && !whatsappError(pending.whatsapp ?? "", pending.whatsapp_opt_in)) await register(pending);
+      } else {
+        // Email ya verificado: si es cliente por sus turnos, precargar sus datos
+        const { data: known } = await supabase.rpc("loyalty_prefill");
+        const k = known?.[0];
+        if (k) {
+          setKnownName(k.first_name);
+          setFirstName(k.first_name ?? "");
+          setWhatsapp(k.whatsapp ?? "");
+          setBirthDay(k.birth_day ? String(k.birth_day) : "");
+          setBirthMonth(k.birth_month ? String(k.birth_month) : "");
+        }
       }
       setChecking(false);
     })();
@@ -137,8 +149,12 @@ const CompleteSignup = () => {
     <div className="space-y-6 w-full">
       <form onSubmit={e => { e.preventDefault(); submit(); }} className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4">
         <div className="pb-2">
-          <h2 className="font-serif text-3xl sm:text-4xl">Creá tu tarjeta</h2>
-          <p className="text-muted-foreground mt-1">Completá tus datos para empezar.</p>
+          <h2 className="font-serif text-3xl sm:text-4xl">{knownName ? `¡Hola ${knownName}!` : "Creá tu tarjeta"}</h2>
+          <p className="text-muted-foreground mt-1">
+            {knownName
+              ? "Ya te conocemos: completamos tus datos. Revisalos, sumá tu cumpleaños y listo."
+              : "Completá tus datos para empezar."}
+          </p>
         </div>
         <div>
           <Label htmlFor="fn2">Nombre</Label>

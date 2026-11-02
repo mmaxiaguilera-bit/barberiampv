@@ -1104,6 +1104,16 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      loyalty_prefill: {
+        Args: never
+        Returns: {
+          birth_day: number | null
+          birth_month: number | null
+          first_name: string
+          last_name: string | null
+          whatsapp: string | null
+        }[]
+      }
       loyalty_register: {
         Args: {
           _birth_day?: number
