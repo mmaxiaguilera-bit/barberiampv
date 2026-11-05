@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
       .gte("updated_at", since);
     q = isUuid(appointment_id) ? q.eq("id", appointment_id) : q.eq("cancel_token", cancel_token);
     const { data: appt } = await q
-      .select("client_name, client_email, service_name, appointment_date, appointment_time, clients(email, first_name), barbers(name)")
+      .select("id, client_name, client_email, service_name, appointment_date, appointment_time, clients(email, first_name), barbers(name)")
       .maybeSingle();
     if (!appt) return json(req, { ok: true, skipped: "not_eligible" });
 
@@ -79,7 +79,13 @@ Deno.serve(async (req) => {
 </body>
 </html>`.trim();
 
+    try {
     await sendMail(to, "Tu turno fue cancelado — Barbería MVP", html);
+    } catch (err) {
+      // El mail no salió: se libera la marca para poder reintentar
+      await admin.from("appointments").update({ cancellation_sent_at: null }).eq("id", a.id);
+      throw err;
+    }
 
     return json(req, { ok: true });
   } catch (e) {

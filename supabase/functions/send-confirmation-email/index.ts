@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
       .is("confirmation_sent_at", null)
       .neq("status", "cancelado")
       .gte("created_at", since)
-      .select("client_name, client_email, service_name, appointment_date, appointment_time, cancel_token, clients(email, first_name), barbers(name)")
+      .select("id, client_name, client_email, service_name, appointment_date, appointment_time, cancel_token, clients(email, first_name), barbers(name)")
       .maybeSingle();
     if (!appt) return json(req, { ok: true, skipped: "not_eligible" });
 
@@ -79,7 +79,13 @@ Deno.serve(async (req) => {
 </body>
 </html>`.trim();
 
+    try {
     await sendMail(to, "¡Tu turno está confirmado! — Barbería MVP", html);
+    } catch (err) {
+      // El mail no salió: se libera la marca para poder reintentar
+      await admin.from("appointments").update({ confirmation_sent_at: null }).eq("id", a.id);
+      throw err;
+    }
 
     return json(req, { ok: true });
   } catch (e) {
