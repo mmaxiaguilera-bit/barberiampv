@@ -15,6 +15,7 @@ import { z } from "zod";
 import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { ONLINE_CANCEL_HOURS, PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal";
+import { rememberBooking } from "@/lib/myBookings";
 
 interface BookingDialogProps {
   open: boolean;
@@ -27,7 +28,20 @@ const formSchema = z.object({
   first_name: z.string().trim().min(2, "Nombre: mínimo 2 caracteres").max(50),
   last_name: z.string().trim().min(2, "Apellido: mínimo 2 caracteres").max(50),
   client_phone: z.string().trim().min(6, "Teléfono inválido").max(25),
+  email: z.string().trim().min(1, "Dejá tu email: te mandamos ahí el link para ver o cancelar el turno").max(254)
+    .email("Revisá el email"),
 });
+
+const bookingErrorMessage = (msg: string) => {
+  if (msg.includes("too_many_bookings")) return "Ya tenés 3 turnos reservados. Para reservar otro, cancelá alguno o escribinos.";
+  if (msg.includes("busy_try_later")) return "Hay muchas reservas en este momento. Probá de nuevo en unos minutos.";
+  if (msg.includes("outside_schedule") || msg.includes("invalid_datetime")) return "Ese horario ya no está disponible. Elegí otro.";
+  if (msg.includes("invalid_phone")) return "Revisá el teléfono: solo números, espacios, + o guiones.";
+  if (msg.includes("invalid_email")) return "Revisá el email.";
+  if (msg.includes("invalid_name")) return "Revisá nombre y apellido (mínimo 2 letras).";
+  if (msg.includes("terms_not_accepted")) return "Para reservar tenés que aceptar las condiciones de reserva.";
+  return "No se pudo reservar el turno. Intentá de nuevo o escribinos.";
+};
 
 export const BookingDialog = ({ open, onOpenChange, initialBarberId }: BookingDialogProps) => {
   const { customerId } = useAuth();
@@ -49,11 +63,10 @@ export const BookingDialog = ({ open, onOpenChange, initialBarberId }: BookingDi
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [lookingUp, setLookingUp] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [isReturningClient, setIsReturningClient] = useState(false);
-  const [existingClientId, setExistingClientId] = useState<string | null>(null);
+  const [bookingToken, setBookingToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -84,7 +97,6 @@ export const BookingDialog = ({ open, onOpenChange, initialBarberId }: BookingDi
         setPhone(p => p || (data.phone ?? data.whatsapp ?? ""));
         setEmail(data.email ?? "");
         setIsReturningClient(true);
-        setExistingClientId(customerId);
       });
   }, [open, customerId]);
 
@@ -105,26 +117,10 @@ export const BookingDialog = ({ open, onOpenChange, initialBarberId }: BookingDi
       .finally(() => setLoadingSlots(false));
   }, [barber, date, schedules, service]);
 
-  const lookupPhone = async (p: string) => {
-    if (customerId) return;
-    if (p.length < 6) { setIsReturningClient(false); setExistingClientId(null); return; }
-    setLookingUp(true);
-    const { data } = await supabase.rpc("get_client_by_phone", { _phone: p });
-    setLookingUp(false);
-    // Solo vincula el turno a la ficha existente: no precarga datos personales
-    // (cualquiera puede escribir un teléfono ajeno)
-    if (data && data.length > 0) {
-      setIsReturningClient(true);
-      setExistingClientId(data[0].id);
-    } else {
-      setIsReturningClient(false);
-      setExistingClientId(null);
-    }
-  };
 
   const reset = () => {
     setStep(1); setService(null); setBarber(null); setDate(undefined);
-    setTime(null); setFirstName(""); setLastName(""); setPhone(""); setEmail(""); setAcceptedTerms(false); setDone(false); setIsReturningClient(false); setExistingClientId(null);
+    setTime(null); setFirstName(""); setLastName(""); setPhone(""); setEmail(""); setAcceptedTerms(false); setDone(false); setIsReturningClient(false); setBookingToken(null);
   };
 
   const handleClose = (o: boolean) => {
@@ -133,7 +129,7 @@ export const BookingDialog = ({ open, onOpenChange, initialBarberId }: BookingDi
   };
 
   const submit = async () => {
-    const parsed = formSchema.safeParse({ first_name: firstName, last_name: lastName, client_phone: phone });
+    const parsed = formSchema.safeParse({ first_name: firstName, last_name: lastName, client_phone: phone, email });
     if (!parsed.success) {
       toast.error(parsed.error.issues[0].message);
       return;
@@ -145,80 +141,37 @@ export const BookingDialog = ({ open, onOpenChange, initialBarberId }: BookingDi
     if (!service || !barber || !date || !time) return;
     setSubmitting(true);
 
-    // Resolver ID del cliente
-    let resolvedClientId: string;
-
-    if (isReturningClient && existingClientId) {
-      // Cliente ya reconocido por teléfono, usar su ID directamente
-      resolvedClientId = existingClientId;
-    } else {
-      // Cliente nuevo: generamos el ID en el frontend para evitar SELECT post-insert
-      // (anon no tiene política SELECT en clients, entonces .insert().select() falla con RLS)
-      const newClientId = crypto.randomUUID();
-      const { error: insertError } = await supabase
-        .from("clients")
-        .insert({
-          id: newClientId,
-          first_name: parsed.data.first_name,
-          last_name: parsed.data.last_name,
-          phone: parsed.data.client_phone,
-          ...(email.trim() ? { email: email.trim() } : {}),
-        });
-
-      if (insertError) {
-        if (insertError.code === "23505") {
-          // Teléfono ya existía (race condition), buscar su ID
-          const { data: existing } = await supabase.rpc("get_client_by_phone", { _phone: parsed.data.client_phone });
-          if (!existing || existing.length === 0) { setSubmitting(false); toast.error("Error al registrar el cliente."); return; }
-          resolvedClientId = existing[0].id;
-        } else {
-          setSubmitting(false);
-          toast.error(insertError.message);
-          return;
-        }
-      } else {
-        resolvedClientId = newClientId;
-      }
-    }
-
-    const fullName = `${parsed.data.first_name} ${parsed.data.last_name}`;
-    const { error } = await supabase.from("appointments").insert({
-      client_name: fullName,
-      client_phone: parsed.data.client_phone,
-      client_id: resolvedClientId,
-      service_id: service.id,
-      service_name: service.name,
-      service_price: service.price,
-      service_duration_minutes: service.duration_minutes,
-      barber_id: barber.id,
-      appointment_date: toISODate(date),
-      appointment_time: time,
-      status: "pendiente",
-      terms_version: TERMS_VERSION,
-      privacy_notice_version: PRIVACY_VERSION,
+    // La reserva la valida y la guarda el servidor (precio, duración, horario, ficha del cliente)
+    const { data, error } = await supabase.rpc("create_booking", {
+      _service_id: service.id,
+      _barber_id: barber.id,
+      _date: toISODate(date),
+      _time: time,
+      _first_name: parsed.data.first_name,
+      _last_name: parsed.data.last_name,
+      _phone: parsed.data.client_phone,
+      _email: parsed.data.email,
+      _terms_version: TERMS_VERSION,
+      _privacy_notice_version: PRIVACY_VERSION,
     });
     setSubmitting(false);
     if (error) {
-      if (error.code === "23505") {
+      if (error.code === "23505" || error.message.includes("slot_taken")) {
         toast.error("Ese horario acaba de ser reservado. Elegí otro.");
         const fresh = await getAvailableSlots(barber.id, date, schedules, service.duration_minutes);
         setSlots(fresh);
         setTime(null);
       } else {
-        toast.error(error.message);
+        toast.error(bookingErrorMessage(error.message));
       }
       return;
     }
-    if (email.trim()) {
+    const booking = (data ?? [])[0];
+    if (booking) {
+      rememberBooking(booking.booking_token, toISODate(date));
+      setBookingToken(booking.booking_token);
       supabase.functions.invoke("send-confirmation-email", {
-        body: {
-          client_name: parsed.data.first_name,
-          client_email: email.trim(),
-          service_name: service.name,
-          barber_name: barber.name,
-          appointment_date: toISODate(date),
-          appointment_time: time,
-        },
+        body: { appointment_id: booking.booking_id },
       }).catch(() => {});
     }
     setDone(true);
@@ -383,12 +336,10 @@ export const BookingDialog = ({ open, onOpenChange, initialBarberId }: BookingDi
                         <Input
                           id="phone"
                           value={phone}
-                          onChange={e => { setPhone(e.target.value); lookupPhone(e.target.value); }}
+                          onChange={e => setPhone(e.target.value)}
                           placeholder="+54 9 297..."
                           maxLength={25}
-                          className={lookingUp ? "pr-9" : ""}
                         />
-                        {lookingUp && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
                       </div>
                     </div>
                     {isReturningClient && customerId && (
@@ -413,7 +364,7 @@ export const BookingDialog = ({ open, onOpenChange, initialBarberId }: BookingDi
                     </div>
                     <div>
                       <Label htmlFor="email" className="text-xs uppercase tracking-[0.02em] text-muted-foreground flex items-center gap-1.5 mb-1.5">
-                        <Mail className="h-3 w-3" /> Email <span className="text-muted-foreground/60 normal-case">(opcional, para recibir la confirmación)</span>
+                        <Mail className="h-3 w-3" /> Email <span className="text-muted-foreground/60 normal-case">(te llega el link para ver o cancelar el turno)</span>
                       </Label>
                       <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" maxLength={255} />
                     </div>
@@ -466,7 +417,13 @@ export const BookingDialog = ({ open, onOpenChange, initialBarberId }: BookingDi
             </p>
             <div className="rounded-lg border border-border bg-secondary/30 p-3 text-xs text-muted-foreground">
               Recordá llegar 5 minutos antes. Si no podés asistir, cancelalo desde "Mi turno" hasta {ONLINE_CANCEL_HOURS} h antes o avisanos.
+              {" "}Te mandamos a <strong className="text-foreground">{email.trim()}</strong> el link para verlo o cancelarlo desde cualquier dispositivo.
             </div>
+            {bookingToken && (
+              <Button variant="goldOutline" asChild className="w-full">
+                <Link to={`/mi-turno?t=${bookingToken}`} onClick={() => handleClose(false)}>Ver mi turno</Link>
+              </Button>
+            )}
             <Button variant="gold" onClick={() => handleClose(false)} className="w-full">
               Cerrar
             </Button>

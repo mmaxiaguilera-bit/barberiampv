@@ -182,14 +182,9 @@ export const getDayAgenda = async (
 
 /** Días completos bloqueados (viajes, feriados) de un barbero entre dos fechas ISO, inclusive. */
 export const getFullDayBlockedDates = async (barberId: string, fromISO: string, toISO: string): Promise<Set<string>> => {
-  const { data } = await supabase
-    .from("barber_blocks")
-    .select("block_date")
-    .eq("barber_id", barberId)
-    .is("start_time", null)
-    .gte("block_date", fromISO)
-    .lte("block_date", toISO);
-  return new Set((data ?? []).map(b => b.block_date));
+  // RPC: el público ve qué días no hay atención, no el motivo del bloqueo
+  const { data } = await supabase.rpc("get_full_day_blocked_dates", { _barber_id: barberId, _from: fromISO, _to: toISO });
+  return new Set(((data ?? []) as { block_date: string }[]).map(b => b.block_date));
 };
 
 /** Fechas ISO de un rango, inclusive. */

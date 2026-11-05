@@ -11,10 +11,10 @@ const PURPOSES: { what: string; data: string; basis: string; required: string }[
     required: "Obligatorios: sin ellos no podemos tomar la reserva",
   },
   {
-    what: "Enviarte la confirmación o la cancelación del turno por email",
+    what: "Enviarte la confirmación, la cancelación y el link personal para ver o cancelar el turno",
     data: "Email",
-    basis: "Lo dejás voluntariamente para recibir esos avisos",
-    required: "Opcional: si no lo dejás, reservás igual",
+    basis: "Necesario para el servicio que pedís: es la forma de verificar que el turno es tuyo",
+    required: "Obligatorio para reservar online (si no querés dejarlo, podés reservar por WhatsApp)",
   },
   {
     what: "Cobrar en el local y llevar la caja",
@@ -88,7 +88,7 @@ const PrivacyPolicy = () => (
         <li><Strong>Personal de {BUSINESS.name}:</Strong> el dueño y los barberos, con cuentas personales y solo para atenderte y gestionar turnos, cobros y la tarjeta.</li>
         <li><Strong>Soporte técnico:</Strong> el proveedor que desarrolla y mantiene el sitio accede para resolver problemas y verificar que funcione. Actúa por cuenta de {BUSINESS.name}.</li>
         <li><Strong>Supabase Inc.:</Strong> aloja la base de datos y gestiona el inicio de sesión de la tarjeta, incluido el envío del código de acceso por email.</li>
-        <li><Strong>Servicio de correo:</Strong> envía los emails de confirmación y cancelación de turnos.</li>
+        <li><Strong>Servicio de correo (Resend):</Strong> envía los emails de confirmación y cancelación de turnos y los links para verlos o cancelarlos.</li>
         <li><Strong>Autoridades:</Strong> solo cuando una ley o una orden judicial lo exija.</li>
       </ul>
     </Section>

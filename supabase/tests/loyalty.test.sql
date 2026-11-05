@@ -406,19 +406,17 @@ BEGIN
   SELECT * INTO i FROM ids;
   SELECT id INTO s FROM services ORDER BY display_order LIMIT 1;
 
-  -- Reserva web: sin versiones se rechaza, con versiones queda registrada
+  -- Reserva web (create_booking): sin versiones se rechaza, con versiones queda registrada
   PERFORM pg_temp.act(NULL);
-  e := pg_temp.err(format($q$INSERT INTO appointments (client_name, client_phone, service_id, service_name, barber_id,
-    appointment_date, appointment_time, status) VALUES ('Ana Web', '2970009991', %L, 'Corte', %L, CURRENT_DATE + 5, '10:07', 'pendiente')$q$, s, i.pedro));
+  e := pg_temp.err(format($q$SELECT create_booking(%L, %L, CURRENT_DATE + 5, '10:07', 'Ana', 'Web', '2970009991')$q$, s, i.pedro));
   PERFORM pg_temp.ok('reserva web sin aceptar condiciones se rechaza', e IS NOT NULL, e);
-  e := pg_temp.err(format($q$INSERT INTO appointments (id, client_name, client_phone, service_id, service_name, barber_id,
+  RESET role;
+  INSERT INTO appointments (id, client_name, client_phone, service_id, service_name, barber_id,
     appointment_date, appointment_time, status, terms_version, privacy_notice_version)
-    VALUES (%L, 'Ana Web', '2970009991', %L, 'Corte', %L, CURRENT_DATE + 5, '10:07', 'pendiente', 'terminos-v2-2026-10', 'privacidad-v2-2026-10')$q$, a, s, i.pedro));
-  PERFORM pg_temp.ok('reserva web con condiciones aceptadas se guarda', e IS NULL, e);
-  e := pg_temp.err(format($q$INSERT INTO appointments (client_name, client_phone, service_id, service_name, barber_id,
-    appointment_date, appointment_time, status, terms_version, privacy_notice_version)
-    VALUES ('Ana Web', '2970009991', %L, 'Corte', %L, CURRENT_DATE + 6, '10:07', 'pendiente', 'terminos-inventados', 'privacidad-v2-2026-10')$q$, s, i.pedro));
-  PERFORM pg_temp.ok('versión de condiciones inexistente se rechaza', e IS NOT NULL, e);
+    VALUES (a, 'Ana Web', '2970009991', s, 'Corte', i.pedro, CURRENT_DATE + 5, '10:07', 'pendiente', 'terminos-v2-2026-10', 'privacidad-v2-2026-10');
+  PERFORM pg_temp.act(NULL);
+  e := pg_temp.err(format($q$SELECT create_booking(%L, %L, CURRENT_DATE + 6, '10:07', 'Ana', 'Web', '2970009991', 'ana@mvp.test', 'terminos-inventados', 'privacidad-v2-2026-10')$q$, s, i.pedro));
+  PERFORM pg_temp.ok('versión de condiciones inexistente se rechaza', e LIKE '%terms_not_accepted%', e);
 
   -- La prueba se puede recuperar y no se puede alterar
   PERFORM pg_temp.act(i.admin);
@@ -447,23 +445,24 @@ BEGIN
   e := pg_temp.err($q$SELECT loyalty_register(_first_name => 'SinWa', _terms_version => 'terminos-v2-2026-10', _privacy_notice_version => 'privacidad-v2-2026-10')$q$);
   PERFORM pg_temp.ok('se puede crear la tarjeta sin WhatsApp', e IS NULL, e);
 
-  -- Búsqueda por teléfono: solo devuelve el id
+  -- Búsqueda por teléfono: ya no existe para el público
   PERFORM pg_temp.act(NULL);
-  SELECT count(*) INTO n FROM get_client_by_phone('2970000003');
+  e := pg_temp.err($q$SELECT get_client_by_phone('2970000003')$q$);
+  PERFORM pg_temp.ok('no hay búsqueda pública por teléfono', e IS NOT NULL, e);
   RESET role;
-  SELECT count(*) INTO cols FROM information_schema.routines r
-    JOIN information_schema.parameters p ON p.specific_name = r.specific_name
-    WHERE r.routine_schema = 'public' AND r.routine_name = 'get_client_by_phone' AND p.parameter_mode = 'OUT';
-  PERFORM pg_temp.ok('búsqueda por teléfono no expone nombre, email ni nacimiento', n = 1 AND cols = 1, 'columnas: ' || cols);
 
   -- Cancelación online: solo con más de 3 h de anticipación
   near := date_trunc('minute', now() AT TIME ZONE 'America/Argentina/Buenos_Aires') + INTERVAL '2 hours 3 minutes';
   INSERT INTO appointments (id, client_name, client_phone, service_id, service_name, barber_id, appointment_date, appointment_time, status)
   VALUES (a_near, 'Ana Web', '2970009991', s, 'Corte', i.pedro, near::date, near::time, 'pendiente');
+  SELECT cancel_token INTO pv FROM appointments WHERE id = a_near;
   PERFORM pg_temp.act(NULL);
-  PERFORM pg_temp.ok('no se cancela online con menos de 3 h', NOT cancel_my_appointment('2970009991', a_near));
-  PERFORM pg_temp.ok('se cancela online con más de 3 h', cancel_my_appointment('2970009991', a));
-  PERFORM pg_temp.ok('con otro teléfono no se cancela', NOT cancel_my_appointment('2970000001', a_near));
+  PERFORM pg_temp.ok('no se cancela online con menos de 3 h', NOT cancel_appointment_by_token(pv::uuid));
+  RESET role;
+  SELECT cancel_token INTO tv FROM appointments WHERE id = a;
+  PERFORM pg_temp.act(NULL);
+  PERFORM pg_temp.ok('se cancela online con más de 3 h', cancel_appointment_by_token(tv::uuid));
+  PERFORM pg_temp.ok('con un token inventado no se cancela', NOT cancel_appointment_by_token(gen_random_uuid()));
 END $$;
 
 RESET role;

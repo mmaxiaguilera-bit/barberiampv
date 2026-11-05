@@ -29,3 +29,20 @@ dist-ssr
 
 # Supabase CLI (vinculación local con el proyecto)
 supabase/.temp
+
+# Certificados, llaves y bases locales
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.sqlite
+*.sqlite3
+*.db
+
+# Vercel / Supabase CLI
+.vercel
+supabase/.branches
+
+# Reportes locales (no versionar: el repo es público)
+REPORTE_SEGURIDAD.md

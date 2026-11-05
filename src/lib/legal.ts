@@ -1,11 +1,11 @@
 // Versiones vigentes de los documentos legales. Deben existir en
 // public.legal_document_versions: al cambiar un texto, crear una versión nueva
 // (migración) y actualizar estas constantes. Ver docs/LEGAL.md.
-export const TERMS_VERSION = "terminos-v2-2026-10";
-export const PRIVACY_VERSION = "privacidad-v3-2026-11";
-export const LEGAL_UPDATED_AT = "22 de octubre de 2026";
+export const TERMS_VERSION = "terminos-v3-2026-11";
+export const PRIVACY_VERSION = "privacidad-v4-2026-11";
+export const LEGAL_UPDATED_AT = "5 de noviembre de 2026";
 
-// Anticipación mínima para cancelar online (la valida también cancel_my_appointment)
+// Anticipación mínima para cancelar online (la valida también cancel_appointment_by_token)
 export const ONLINE_CANCEL_HOURS = 3;
 
 export const BUSINESS = {

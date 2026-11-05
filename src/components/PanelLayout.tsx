@@ -131,7 +131,7 @@ const SidebarContent = () => {
   );
 };
 
-type NoRoleState = "checking" | "no_admin" | "pending" | "no_request" | "rejected";
+type NoRoleState = "checking" | "pending" | "no_request" | "rejected";
 
 const NoRoleScreen = () => {
   const { user, customerId, refreshRole, signOut } = useAuth();
@@ -140,23 +140,13 @@ const NoRoleScreen = () => {
 
   useEffect(() => {
     const check = async () => {
-      const [{ data: anyAdmin }, { data: request }] = await Promise.all([
-        supabase.rpc("has_any_admin"),
-        supabase.from("access_requests").select("status").eq("user_id", user!.id).maybeSingle(),
-      ]);
-
-      if (!anyAdmin) { setState("no_admin"); return; }
+      // El rol de admin solo lo da otro admin (ya no existe "soy el primer admin")
+      const { data: request } = await supabase.from("access_requests").select("status").eq("user_id", user!.id).maybeSingle();
       if (!request) { setState("no_request"); return; }
       setState(request.status === "pending" ? "pending" : "rejected");
     };
     check();
   }, [user]);
-
-  const claimFirstAdmin = async () => {
-    const { data, error } = await supabase.rpc("claim_first_admin");
-    if (error) return alert(error.message);
-    if (data) await refreshRole();
-  };
 
   const requestAccess = async () => {
     const { error } = await supabase.from("access_requests").upsert({ user_id: user!.id, status: "pending" }, { onConflict: "user_id" });
@@ -180,25 +170,6 @@ const NoRoleScreen = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (state === "no_admin") {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="luxury-card p-6 max-w-md w-full text-center space-y-4">
-          <Scissors className="h-10 w-10 text-primary mx-auto" />
-          <h1 className="font-serif text-2xl">Tu cuenta no tiene rol asignado</h1>
-          <p className="text-sm text-muted-foreground">
-            Hola {user?.email}. Todavía no hay ningún administrador en el sistema.
-          </p>
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={handleSignOut}>Salir</Button>
-            <Button variant="gold" className="flex-1" onClick={claimFirstAdmin}>Soy el primer admin</Button>
-          </div>
-          <p className="text-[11px] text-muted-foreground">Esta opción solo funciona si todavía no existe ningún admin en el sistema.</p>
-        </div>
       </div>
     );
   }

@@ -17,6 +17,8 @@ case "${1:-}" in
   seed)  supabase db query --linked -f supabase/dev/seed.sql ;;
   reset) supabase db query --linked -f supabase/dev/reset.sql && supabase db query --linked -f supabase/dev/seed.sql ;;
   test)  supabase db query --linked -f supabase/tests/loyalty.test.sql ;;
+  security) supabase db query --linked -f supabase/tests/security.test.sql ;;
+  apply) supabase db query --linked -f "${2:?Uso: scripts/dev-db.sh apply <archivo.sql>}" ;;
   types) supabase gen types typescript --linked --schema public > src/integrations/supabase/types.ts ;;
-  *) echo "Uso: scripts/dev-db.sh {push|seed|reset|test|types}" >&2; exit 1 ;;
+  *) echo "Uso: scripts/dev-db.sh {push|seed|reset|test|security|apply <archivo>|types}" >&2; exit 1 ;;
 esac

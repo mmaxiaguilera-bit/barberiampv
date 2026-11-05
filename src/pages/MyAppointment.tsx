@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,12 +16,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Calendar, Clock, Scissors, User, Loader2, Search } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Scissors, User, Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { formatTime } from "@/lib/booking";
+import { forgetBooking, isToken, rememberBooking, rememberedTokens } from "@/lib/myBookings";
 
 type Appt = {
-  id: string;
+  token: string;
   appointment_date: string;
   appointment_time: string;
   service_name: string;
@@ -38,38 +39,56 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 
 const MyAppointment = () => {
   const navigate = useNavigate();
-  const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [searchParams] = useSearchParams();
+  const [loading, setLoading] = useState(true);
   const [appointments, setAppointments] = useState<Appt[] | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [linkEmail, setLinkEmail] = useState("");
+  const [sendingLinks, setSendingLinks] = useState(false);
+  const [linksSent, setLinksSent] = useState(false);
 
-  const search = async () => {
-    if (phone.trim().length < 6) return toast.error("Ingresá tu número de teléfono");
-    setLoading(true);
-    const { data, error } = await supabase.rpc("get_my_appointments", { _phone: phone.trim() });
-    setLoading(false);
-    if (error) { toast.error("Error al buscar turnos"); return; }
-    setAppointments((data ?? []) as Appt[]);
+  // Reenvío de links: solo le llegan al dueño del email (la respuesta no revela si hay turnos)
+  const requestLinks = async () => {
+    const value = linkEmail.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) return toast.error("Revisá el email");
+    setSendingLinks(true);
+    const { error } = await supabase.functions.invoke("send-booking-links", { body: { email: value } });
+    setSendingLinks(false);
+    if (error) return toast.error("No pudimos enviar el mail. Probá de nuevo en un rato.");
+    setLinksSent(true);
   };
 
-  const cancelAppointment = async (id: string) => {
-    setCancelling(id);
-    const { data: ok, error } = await supabase.rpc("cancel_my_appointment", {
-      _phone: phone.trim(),
-      _appointment_id: id,
+  // Turnos de este dispositivo + el del link del mail (?t=...). Sin token no se ve ningún turno.
+  useEffect(() => {
+    const fromLink = searchParams.get("t");
+    const tokens = [...new Set([...(isToken(fromLink) ? [fromLink] : []), ...rememberedTokens()])];
+    if (tokens.length === 0) { setAppointments([]); setLoading(false); return; }
+    supabase.rpc("get_appointments_by_tokens", { _tokens: tokens }).then(({ data, error }) => {
+      setLoading(false);
+      if (error) { toast.error("Error al buscar tus turnos"); setAppointments([]); return; }
+      const list = (data ?? []) as Appt[];
+      // Guarda el turno del link en este dispositivo y olvida los que ya no existen
+      for (const a of list) rememberBooking(a.token, a.appointment_date);
+      for (const t of tokens) if (!list.some(a => a.token === t)) forgetBooking(t);
+      setAppointments(list);
     });
+  }, [searchParams]);
+
+  const cancelAppointment = async (token: string) => {
+    setCancelling(token);
+    const { data: ok, error } = await supabase.rpc("cancel_appointment_by_token", { _token: token });
     if (error || !ok) {
       setCancelling(null);
       toast.error("No se pudo cancelar el turno. Comunicate con la barbería.");
       return;
     }
     supabase.functions.invoke("send-cancellation-email", {
-      body: { appointment_id: id },
+      body: { cancel_token: token },
     }).catch(() => {});
     setCancelling(null);
     toast.success("Turno cancelado correctamente");
     setAppointments(prev =>
-      prev?.map(a => a.id === id ? { ...a, status: "cancelado" } : a) ?? []
+      prev?.map(a => a.token === token ? { ...a, status: "cancelado" } : a) ?? []
     );
   };
 
@@ -86,34 +105,21 @@ const MyAppointment = () => {
           <h1 className="font-serif text-4xl mb-3">Mi turno</h1>
           <div className="gold-divider" />
           <p className="text-sm text-muted-foreground mt-4">
-            Ingresá tu número de teléfono para ver tus próximos turnos y, si necesitás, cancelarlos.
+            Acá ves los turnos que reservaste desde este celular o computadora, y podés cancelarlos.
+            Desde otro dispositivo, abrí el link del mail de confirmación o pedí que te lo reenviemos.
           </p>
         </div>
 
-        <div className="luxury-card p-6 mb-6">
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="phone">Número de teléfono</Label>
-              <Input
-                id="phone"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                placeholder="+54 9 297..."
-                onKeyDown={e => e.key === "Enter" && search()}
-              />
-            </div>
-            <Button variant="gold" className="w-full" onClick={search} disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Search className="h-4 w-4" /> Buscar mis turnos</>}
-            </Button>
-          </div>
-        </div>
+        {loading && (
+          <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+        )}
 
         {appointments !== null && (
           appointments.length === 0 ? (
             <div className="luxury-card p-8 text-center">
               <Calendar className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground">No hay turnos próximos con este número.</p>
-              <p className="text-xs text-muted-foreground/60 mt-2">¿Querés reservar uno nuevo?</p>
+              <p className="text-muted-foreground">No encontramos turnos próximos en este dispositivo.</p>
+              <p className="text-xs text-muted-foreground/60 mt-2">Si reservaste desde otro dispositivo, usá el link del mail o pedilo abajo.</p>
               <Button variant="goldOutline" size="sm" className="mt-4" onClick={() => navigate("/")}>
                 Reservar turno
               </Button>
@@ -131,7 +137,7 @@ const MyAppointment = () => {
                 const canCancel = isActivatable && hoursUntil > 3;
                 const tooLate = isActivatable && hoursUntil <= 3;
                 return (
-                  <div key={a.id} className="luxury-card p-4">
+                  <div key={a.token} className="luxury-card p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
@@ -172,7 +178,7 @@ const MyAppointment = () => {
                               className="w-full text-destructive border-destructive/30 hover:bg-destructive/10"
                               disabled={!!cancelling}
                             >
-                              {cancelling === a.id
+                              {cancelling === a.token
                                 ? <Loader2 className="h-4 w-4 animate-spin" />
                                 : "Cancelar turno"}
                             </Button>
@@ -190,7 +196,7 @@ const MyAppointment = () => {
                             <AlertDialogFooter>
                               <AlertDialogCancel>No, mantener</AlertDialogCancel>
                               <AlertDialogAction
-                                onClick={() => cancelAppointment(a.id)}
+                                onClick={() => cancelAppointment(a.token)}
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               >
                                 Sí, cancelar
@@ -205,6 +211,34 @@ const MyAppointment = () => {
               })}
             </div>
           )
+        )}
+
+        {!loading && (
+          <div className="luxury-card p-6 mt-6">
+            {linksSent ? (
+              <p className="text-sm text-muted-foreground text-center">
+                Si tenés turnos próximos con <strong className="text-foreground">{linkEmail.trim()}</strong>, te llegó un mail
+                con los links. Revisá también la carpeta de spam.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <p className="font-medium text-sm">¿No ves tu turno?</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Escribí el email que dejaste al reservar y te mandamos el link de cada turno.
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="link-email" className="sr-only">Email</Label>
+                  <Input id="link-email" type="email" value={linkEmail} maxLength={254} placeholder="tu@email.com"
+                    onChange={e => setLinkEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && requestLinks()} />
+                </div>
+                <Button variant="goldOutline" className="w-full" onClick={requestLinks} disabled={sendingLinks}>
+                  {sendingLinks ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Mail className="h-4 w-4" /> Reenviame el link</>}
+                </Button>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

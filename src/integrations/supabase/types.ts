@@ -40,6 +40,10 @@ export type Database = {
           appointment_date: string
           appointment_time: string
           barber_id: string
+          cancel_token: string
+          cancellation_sent_at: string | null
+          client_email: string | null
+          confirmation_sent_at: string | null
           client_id: string | null
           client_name: string
           client_phone: string
@@ -59,6 +63,10 @@ export type Database = {
           appointment_date: string
           appointment_time: string
           barber_id: string
+          cancel_token?: string
+          cancellation_sent_at?: string | null
+          client_email?: string | null
+          confirmation_sent_at?: string | null
           client_id?: string | null
           client_name: string
           client_phone: string
@@ -78,6 +86,10 @@ export type Database = {
           appointment_date?: string
           appointment_time?: string
           barber_id?: string
+          cancel_token?: string
+          cancellation_sent_at?: string | null
+          client_email?: string | null
+          confirmation_sent_at?: string | null
           client_id?: string | null
           client_name?: string
           client_phone?: string
@@ -1105,11 +1117,7 @@ export type Database = {
         Returns: string
       }
       can_manage_barber: { Args: { _barber_id: string }; Returns: boolean }
-      cancel_my_appointment: {
-        Args: { _appointment_id: string; _phone: string }
-        Returns: boolean
-      }
-      claim_first_admin: { Args: never; Returns: boolean }
+      cancel_appointment_by_token: { Args: { _token: string }; Returns: boolean }
       client_channel_opt_in: {
         Args: { _channel: string; _client_id: string }
         Returns: boolean
@@ -1117,6 +1125,24 @@ export type Database = {
       client_marketing_opt_in: {
         Args: { _client_id: string }
         Returns: boolean
+      }
+      create_booking: {
+        Args: {
+          _barber_id: string
+          _date: string
+          _email?: string | null
+          _first_name: string
+          _last_name: string
+          _phone: string
+          _privacy_notice_version?: string
+          _service_id: string
+          _terms_version?: string
+          _time: string
+        }
+        Returns: {
+          booking_id: string
+          booking_token: string
+        }[]
       }
       current_client_id: { Args: never; Returns: string }
       get_blocked_ranges: {
@@ -1127,21 +1153,21 @@ export type Database = {
           start_time: string
         }[]
       }
-      get_client_by_phone: {
-        Args: { _phone: string }
-        Returns: {
-          id: string
-        }[]
-      }
-      get_my_appointments: {
-        Args: { _phone: string }
+      get_appointments_by_tokens: {
+        Args: { _tokens: string[] }
         Returns: {
           appointment_date: string
           appointment_time: string
           barber_name: string
-          id: string
           service_name: string
           status: string
+          token: string
+        }[]
+      }
+      get_full_day_blocked_dates: {
+        Args: { _barber_id: string; _from: string; _to: string }
+        Returns: {
+          block_date: string
         }[]
       }
       get_my_service_history: {

@@ -38,7 +38,9 @@ const TermsOfUse = () => (
       <ul className="list-disc pl-5 space-y-2">
         <li>
           Podés cancelar el turno desde <Link to="/mi-turno" className="text-primary hover:underline">Mi turno</Link>{" "}
-          hasta <Strong>{ONLINE_CANCEL_HOURS} horas antes</Strong> del horario reservado. Si faltan menos de{" "}
+          hasta <Strong>{ONLINE_CANCEL_HOURS} horas antes</Strong> del horario reservado, con el link personal
+          que te enviamos por email (o desde el mismo dispositivo en el que reservaste). No lo compartas: quien
+          tenga ese link puede cancelar el turno. Si faltan menos de{" "}
           {ONLINE_CANCEL_HOURS} horas, avisanos directamente a la barbería.
         </li>
         <li>Cancelar no tiene ningún costo.</li>

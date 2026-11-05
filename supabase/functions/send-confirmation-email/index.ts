@@ -1,37 +1,44 @@
-import { SmtpClient } from "https://deno.land/x/denomailer@1.3.0/mod.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Mail de confirmación de una reserva web.
+// Seguridad (auditoría 2026-11-05): ya no acepta destinatario ni textos del cliente.
+// Recibe solo appointment_id, lee todo de la base, manda una única vez y solo para
+// turnos recién creados (15 min). Todo valor se escapa antes de ir al HTML.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, esc, isUuid, json, mailConfigured, sendMail, SITE_URL } from "../_shared/http.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
+  if (req.method !== "POST") return json(req, { error: "Método no permitido" }, 405);
 
   try {
-    const { client_name, client_email, service_name, barber_name, appointment_date, appointment_time } = await req.json();
+    const { appointment_id } = await req.json().catch(() => ({}));
+    if (!isUuid(appointment_id)) return json(req, { error: "appointment_id requerido" }, 400);
 
-    if (!client_email) {
-      return new Response(JSON.stringify({ ok: true, skipped: "no_email" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!mailConfigured()) return json(req, { ok: true, skipped: "no_mail_config" });
 
-    const smtpHost = Deno.env.get("SMTP_HOST");
-    const smtpUser = Deno.env.get("SMTP_USER");
-    const smtpPass = Deno.env.get("SMTP_PASS");
+    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    if (!smtpHost || !smtpUser || !smtpPass) {
-      console.warn("SMTP env vars not configured, skipping email");
-      return new Response(JSON.stringify({ ok: true, skipped: "no_smtp" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // Reclama el envío de forma atómica: solo una vez y solo para turnos recién creados
+    const since = new Date(Date.now() - 15 * 60_000).toISOString();
+    const { data: appt } = await admin.from("appointments")
+      .update({ confirmation_sent_at: new Date().toISOString() })
+      .eq("id", appointment_id)
+      .is("confirmation_sent_at", null)
+      .neq("status", "cancelado")
+      .gte("created_at", since)
+      .select("client_name, client_email, service_name, appointment_date, appointment_time, cancel_token, clients(email, first_name), barbers(name)")
+      .maybeSingle();
+    if (!appt) return json(req, { ok: true, skipped: "not_eligible" });
 
-    const dateStr = new Date(appointment_date + "T12:00:00").toLocaleDateString("es-AR", {
+    const a = appt as any;
+    const to: string | null = a.client_email ?? a.clients?.email ?? null;
+    if (!to) return json(req, { ok: true, skipped: "no_email" });
+
+    const clientName = a.clients?.first_name ?? String(a.client_name ?? "").split(" ")[0] ?? "";
+    const dateStr = new Date(a.appointment_date + "T12:00:00").toLocaleDateString("es-AR", {
       weekday: "long", day: "numeric", month: "long",
     });
-    const timeStr = (appointment_time as string)?.slice(0, 5) ?? "";
+    const timeStr = String(a.appointment_time ?? "").slice(0, 5);
+    const link = `${SITE_URL}/mi-turno?t=${encodeURIComponent(a.cancel_token)}`;
 
     const html = `
 <!DOCTYPE html>
@@ -43,24 +50,25 @@ Deno.serve(async (req) => {
     <div style="color:#666;font-size:11px;letter-spacing:4px;margin-top:4px">PREMIUM BARBER STUDIO</div>
   </div>
   <div style="padding:32px">
-    <h2 style="color:#e5e0d8;font-weight:400;margin:0 0 16px">Hola, ${client_name}</h2>
+    <h2 style="color:#e5e0d8;font-weight:400;margin:0 0 16px">Hola, ${esc(clientName)}</h2>
     <p style="color:#999;line-height:1.6;margin:0 0 24px">
       Tu turno fue reservado con éxito. ¡Te esperamos!
     </p>
     <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:20px;margin:0 0 24px">
       <table style="width:100%;font-size:14px;border-collapse:collapse">
-        <tr><td style="color:#666;padding:5px 0">Servicio</td><td style="color:#e5e0d8;text-align:right">${service_name}</td></tr>
-        <tr><td style="color:#666;padding:5px 0">Barbero</td><td style="color:#e5e0d8;text-align:right">${barber_name}</td></tr>
-        <tr><td style="color:#666;padding:5px 0">Fecha</td><td style="color:#e5e0d8;text-align:right;text-transform:capitalize">${dateStr}</td></tr>
-        <tr><td style="color:#666;padding:5px 0">Hora</td><td style="color:#e5e0d8;text-align:right">${timeStr}</td></tr>
+        <tr><td style="color:#666;padding:5px 0">Servicio</td><td style="color:#e5e0d8;text-align:right">${esc(a.service_name)}</td></tr>
+        <tr><td style="color:#666;padding:5px 0">Barbero</td><td style="color:#e5e0d8;text-align:right">${esc(a.barbers?.name ?? "—")}</td></tr>
+        <tr><td style="color:#666;padding:5px 0">Fecha</td><td style="color:#e5e0d8;text-align:right;text-transform:capitalize">${esc(dateStr)}</td></tr>
+        <tr><td style="color:#666;padding:5px 0">Hora</td><td style="color:#e5e0d8;text-align:right">${esc(timeStr)}</td></tr>
       </table>
     </div>
     <p style="color:#999;font-size:14px;line-height:1.6">
-      Recordá llegar 5 minutos antes. Si necesitás cancelar, podés hacerlo desde nuestra página hasta 3 horas antes del turno.
+      Recordá llegar 5 minutos antes. Si necesitás cancelar, usá el botón de abajo hasta 3 horas antes del turno.
+      Este link es personal: no lo compartas.
     </p>
     <div style="text-align:center;margin:28px 0">
-      <a href="https://barberiampv.com/mi-turno" style="background:linear-gradient(135deg,#c9a84c,#a07830);color:#000;padding:14px 32px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;letter-spacing:1px;display:inline-block">
-        Ver mi turno
+      <a href="${esc(link)}" style="background:linear-gradient(135deg,#c9a84c,#a07830);color:#000;padding:14px 32px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;letter-spacing:1px;display:inline-block">
+        Ver o cancelar mi turno
       </a>
     </div>
   </div>
@@ -71,23 +79,11 @@ Deno.serve(async (req) => {
 </body>
 </html>`.trim();
 
-    const smtp = new SmtpClient();
-    await smtp.connectTLS({ hostname: smtpHost, port: 465, username: smtpUser, password: smtpPass });
-    await smtp.send({
-      from: `Barbería MVP <${smtpUser}>`,
-      to: client_email,
-      subject: "¡Tu turno está confirmado! — Barbería MVP",
-      html,
-    });
-    await smtp.close();
+    await sendMail(to, "¡Tu turno está confirmado! — Barbería MVP", html);
 
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json(req, { ok: true });
   } catch (e) {
     console.error(e);
-    return new Response(JSON.stringify({ error: "Error interno", detail: String(e) }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json(req, { error: "Error interno" }, 500);
   }
 });
