@@ -215,7 +215,7 @@ const AdminCash = () => {
                             <span>{new Date(p.paid_at).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}</span>
                           </div>
                           <div className="text-sm font-medium truncate">{p.client_name || "Cliente"} — {p.service_name}</div>
-                          <div className="text-xs text-muted-foreground">{p.barbers?.name}</div>
+                          <div className="text-xs text-muted-foreground">{p.barbers?.name ?? p.barber_name}</div>
                         </div>
                         <div className="text-right">
                           <div className="font-serif text-primary">{formatPrice(Number(p.amount))}</div>

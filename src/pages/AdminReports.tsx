@@ -70,7 +70,7 @@ const AdminReports = () => {
 
     const byBarber: Record<string, { count: number; amount: number }> = {};
     payments.forEach(p => {
-      const name = p.barbers?.name ?? "—";
+      const name = p.barbers?.name ?? p.barber_name ?? "—";
       byBarber[name] ??= { count: 0, amount: 0 };
       byBarber[name].count++;
       byBarber[name].amount += Number(p.amount);
@@ -99,7 +99,7 @@ const AdminReports = () => {
         new Date(p.paid_at).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }),
         p.client_name ?? "",
         p.service_name,
-        p.barbers?.name ?? "",
+        p.barbers?.name ?? p.barber_name ?? "",
         paymentMethodLabel(p.payment_method),
         String(Number(p.amount).toFixed(2)),
         String(Number(p.tip).toFixed(2)),

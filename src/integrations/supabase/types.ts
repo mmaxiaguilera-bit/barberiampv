@@ -832,7 +832,8 @@ export type Database = {
         Row: {
           amount: number
           appointment_id: string | null
-          barber_id: string
+          barber_id: string | null
+          barber_name: string | null
           client_name: string | null
           created_at: string
           created_by: string | null
@@ -847,7 +848,8 @@ export type Database = {
         Insert: {
           amount: number
           appointment_id?: string | null
-          barber_id: string
+          barber_id?: string | null
+          barber_name?: string | null
           client_name?: string | null
           created_at?: string
           created_by?: string | null
@@ -862,7 +864,8 @@ export type Database = {
         Update: {
           amount?: number
           appointment_id?: string | null
-          barber_id?: string
+          barber_id?: string | null
+          barber_name?: string | null
           client_name?: string | null
           created_at?: string
           created_by?: string | null

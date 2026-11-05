@@ -47,7 +47,11 @@ const AdminBarbers = () => {
     setDeleting(id);
     const { error } = await supabase.from("barbers").delete().eq("id", id);
     setDeleting(null);
-    if (error) return toast.error(error.message);
+    if (error) {
+      return toast.error(error.code === "23503"
+        ? "No se pudo eliminar: este barbero tiene registros vinculados. Dejalo como inactivo."
+        : error.message);
+    }
     toast.success("Barbero eliminado");
     load();
   };
@@ -98,7 +102,7 @@ const AdminBarbers = () => {
                           <AlertDialogHeader>
                             <AlertDialogTitle className="font-serif">¿Eliminar a {b.name}?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Esta acción no se puede deshacer. Se van a borrar también todos sus turnos y horarios asociados.
+                              Esta acción no se puede deshacer. Se van a borrar también todos sus turnos y horarios asociados. Sus cobros quedan guardados en Caja y Reportes con su nombre.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
